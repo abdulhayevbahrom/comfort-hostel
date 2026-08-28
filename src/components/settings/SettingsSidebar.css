@@ -1,0 +1,19 @@
+.settings-workspace { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-width: 0; min-height: 0; overflow: hidden; }
+.settings-sidebar { min-width: 0; min-height: 0; padding: 16px 10px; overflow-y: auto; background: #fff; border-right: 1px solid #dfe9eb; }
+.settings-sidebar-title { display: grid; gap: 2px; padding: 4px 10px 14px; }
+.settings-sidebar-title strong { color: #183f4e; font-size: 17px; }
+.settings-sidebar-title small { color: #84979e; font-size: 11px; }
+.settings-sidebar nav { display: grid; gap: 5px; }
+.settings-sidebar a { display: flex; min-height: 42px; align-items: center; gap: 9px; padding: 0 10px; color: #60747c; border-radius: 8px; font-size: 14px; font-weight: 650; text-decoration: none; }
+.settings-sidebar a span { display: grid; width: 25px; height: 25px; place-items: center; color: #0f766e; background: #e8f7f5; border-radius: 7px; font-size: 12px; font-weight: 850; }
+.settings-sidebar a:hover { color: #155e75; background: #f1f8f8; }
+.settings-sidebar a.active { color: #fff; background: linear-gradient(135deg, #155e75, #0e4b60); box-shadow: 0 8px 18px rgba(21, 94, 117, .18); }
+.settings-sidebar a.active span { color: #155e75; background: #fff; }
+@media (max-width: 700px) {
+  .settings-workspace { display: flex; flex-direction: column; overflow: auto; }
+  .settings-sidebar { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; padding: 8px 10px; overflow-x: auto; border-right: 0; border-bottom: 1px solid #dfe9eb; }
+  .settings-sidebar-title { display: none; }
+  .settings-sidebar nav { display: flex; gap: 7px; }
+  .settings-sidebar a { min-height: 38px; white-space: nowrap; }
+  .settings-workspace > .edu-content { flex: 1 0 auto; overflow: visible; }
+}

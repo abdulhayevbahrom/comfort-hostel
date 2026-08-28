@@ -1,0 +1,29 @@
+.edu-shell {
+  --hostel-primary: #155e75;
+  --hostel-primary-dark: #0e4b60;
+  --hostel-accent: #14b8a6;
+  --hostel-accent-soft: #e8f7f5;
+  --hostel-surface: #f4f8fa;
+  --edu-text: #202238;
+  --edu-muted: #969cb2;
+  --edu-border: #eceef5;
+  display: grid;
+  grid-template-columns: clamp(220px, 13vw, 288px) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--hostel-surface);
+}
+
+button { font: inherit; cursor: pointer; }
+.edu-main { display: grid; grid-template-rows: 56px minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; overflow: hidden; }
+.edu-workspace { display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; overflow: hidden; }
+.edu-content { width: 100%; min-width: 0; min-height: 0; padding: clamp(10px, 2vw, 18px); padding-bottom: calc(clamp(10px, 2vw, 18px) + env(safe-area-inset-bottom, 0px)); overflow: auto; background: #fff; -webkit-overflow-scrolling: touch; }
+.edu-workspace > .edu-content { height: 100%; overscroll-behavior-y: contain; }
+.sidebar-backdrop { display: none; }
+
+@media (max-width: 1199px) {
+  .edu-shell { grid-template-columns: minmax(0, 1fr); }
+  .nav-open .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 15; padding: 0; background: rgba(0, 0, 0, .55); border: 0; }
+}

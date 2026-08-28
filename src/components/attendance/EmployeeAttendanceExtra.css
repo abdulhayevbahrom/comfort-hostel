@@ -1,0 +1,1 @@
+.employee-attendance-stats{grid-template-columns:repeat(6,1fr)}.employee-attendance-stats .pending{background:#f7f7f0}.employee-attendance-chip.pending{color:#7e7025;background:#f6f2d9}@media(max-width:900px){.employee-attendance-stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:620px){.employee-attendance-stats{grid-template-columns:repeat(2,1fr)}}

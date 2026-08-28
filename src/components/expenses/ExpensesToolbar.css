@@ -1,0 +1,85 @@
+.expense-add-button {
+  min-height: 38px;
+  padding: 0 14px;
+  color: #fff;
+  background: #159988;
+  border: 1px solid #0f7f72;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.expense-add-button:hover { background: #0f8274; }
+
+.expense-modal .expense-form-grid > .ant-form-item:nth-child(4) {
+  display: none;
+}
+
+.expense-modal .ant-segmented {
+  padding: 4px;
+  background: #eef4f3;
+  border: 1px solid #d1dfdd;
+  border-radius: 9px;
+}
+
+.expense-modal .ant-segmented-item {
+  min-height: 35px;
+  color: #587078;
+  border-radius: 6px;
+}
+
+.expense-modal .ant-segmented-item-label {
+  display: grid;
+  height: 35px;
+  place-items: center;
+  padding: 0 12px;
+  font-weight: 700;
+}
+
+.expense-modal .ant-segmented-item-selected {
+  color: #fff;
+  background: #159988;
+  box-shadow: 0 3px 8px rgba(21, 153, 136, .24);
+}
+
+.expense-modal .expense-modal-actions .ant-btn-primary {
+  background: #159988;
+  border-color: #159988;
+}
+
+.expense-modal .expense-modal-actions .ant-btn-primary:hover {
+  background: #0f8274;
+  border-color: #0f8274;
+}
+
+.expense-actions button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  font-size: 0;
+}
+
+.expense-actions button::before {
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  content: "";
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.expense-actions button:not(.delete)::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M4 20h4.4L19.7 8.7a2.12 2.12 0 0 0-3-3L5.4 17 4 20Zm3.55-2.1-1.45.36.36-1.45 8.83-8.83 1.09 1.09-8.83 8.83Z'/%3E%3C/svg%3E");
+}
+
+.expense-actions button.delete::before {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M8 6V4h8v2'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3Cpath d='M10 11v5M14 11v5'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 700px) {
+  .expense-add-button { width: 100%; min-height: 40px; }
+}

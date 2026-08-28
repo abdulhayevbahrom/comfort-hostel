@@ -1,0 +1,8 @@
+.attendance-module {
+  margin-top: calc(clamp(10px, 2vw, 18px) * -1 + 4px);
+}
+
+.attendance-tabs button {
+  padding-top: 9px;
+  padding-bottom: 11px;
+}

@@ -1,0 +1,17 @@
+export const navigationItems = [
+  { id: 'dashboard', path: '/', icon: 'home', label: 'Bosh sahifa' },
+  { id: 'students', path: '/students', icon: 'students', label: 'Talabalar' },
+  { id: 'contracts', path: '/contracts', icon: 'contracts', label: 'Shartnomalar' },
+  { id: 'rooms', path: '/rooms', icon: 'rooms', label: 'Xonalar' },
+  { id: 'attendance', path: '/attendance', icon: 'attendance', label: 'Davomat' },
+  { id: 'face-access', path: '/face-access', icon: 'face-access', label: 'FaceID nazorat' },
+  { id: 'payments', path: '/payments', icon: 'payments', label: 'To‘lovlar' },
+  { id: 'cash', path: '/cash', icon: 'cash', label: 'Kassa' },
+  { id: 'debtors', path: '/debtors', icon: 'debtors', label: 'Qarzdorlar' },
+  { id: 'fines', path: '/fines', icon: 'fines', label: 'Jarimalar' },
+  { id: 'employees', path: '/employees', icon: 'employees', label: 'Xodimlar' },
+  { id: 'salaries', path: '/salaries', icon: 'salaries', label: 'Oyliklar' },
+  { id: 'expenses', path: '/expenses', icon: 'expenses', label: 'Xarajatlar' },
+  { id: 'reports', path: '/reports', icon: 'reports', label: 'Hisobot' },
+  { id: 'settings', path: '/settings', icon: 'settings', label: 'Sozlamalar' },
+]

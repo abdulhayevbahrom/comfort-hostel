@@ -1,0 +1,29 @@
+.active-contracts-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 20px 18px;
+}
+.active-contracts-summary article { display: grid; gap: 7px; padding: 15px 16px; background: #eaf7f5; border: 1px solid #c5e5e0; border-radius: 10px; }
+.active-contracts-summary article.active { background: #e6f6eb; border-color: #c5e5ce; }
+.active-contracts-summary article.completed { background: #e8f3f8; border-color: #c9dfe8; }
+.active-contracts-summary article.cancelled { background: #fff0ef; border-color: #f1cdca; }
+.active-contracts-summary article.amount { background: #fff5dd; border-color: #ecdcae; }
+.active-contracts-summary span { color: #688087; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.active-contracts-summary strong { color: #194d4d; font-size: 17px; }
+.active-contracts-summary .active strong { color: #277045; }
+.active-contracts-summary .completed strong { color: #28647b; }
+.active-contracts-summary .cancelled strong { color: #9b4141; }
+.active-contracts-summary .amount strong { color: #89651d; }
+.active-contracts-card .student-history-table tr.contract-expiring-soon td { background: #ffe5e3; border-bottom-color: #efb9b5; }
+.active-contracts-card .student-history-table tr.contract-expiring-soon td:first-child { box-shadow: inset 4px 0 #c94d4d; }
+.active-contracts-card .student-history-table tr.contract-expiring-soon:hover td { background: #ffdcd9; }
+
+@media (max-width: 800px) {
+  .active-contracts-summary { grid-template-columns: 1fr; gap: 8px; padding: 0 12px 12px; }
+  .active-contracts-summary article { gap: 4px; padding: 11px 12px; }
+  .active-contracts-summary span { font-size: 10px; }
+  .active-contracts-summary strong { font-size: 14px; line-height: 1.25; }
+  .active-contracts-card .student-history-table tr.contract-expiring-soon { background: #ffe5e3; border-color: #e9aaa6; }
+  .active-contracts-card .student-history-table tr.contract-expiring-soon td:first-child { box-shadow: none; }
+}

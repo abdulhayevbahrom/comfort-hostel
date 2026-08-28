@@ -1,0 +1,255 @@
+.student-profile-page { display: grid; gap: 10px; color: #263b45; }
+.student-profile-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.student-profile-toolbar > div { display: flex; gap: 8px; }
+.student-profile-back { display: inline-flex; width: max-content; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; color: #155e75; background: #fff; border: 1px solid #cbdde1; border-radius: 8px; font-weight: 700; }
+.student-profile-back .anticon { font-size: 18px; }
+.student-profile-edit, .student-profile-delete { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 8px; font-weight: 700; }
+.student-profile-edit svg, .student-profile-delete svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.student-profile-edit { color: #fff; background: #159988; border: 1px solid #0f766e; }
+.student-profile-delete { color: #a02e35; background: #fff3f3; border: 1px solid #edb8bb; }
+.student-profile-delete:disabled { opacity: .5; }
+.student-profile-card { overflow: hidden; background: #fff; border: 1px solid #d8e5e8; border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 76, 92, .06); }
+.student-profile-head { position: relative; display: flex; min-height: 150px; align-items: center; gap: 18px; padding: 24px; background: linear-gradient(135deg, #e9f8f6, #f7fbfb); border-bottom: 1px solid #dce9eb; }
+.student-profile-photo { display: grid; width: 100px; height: 100px; flex: 0 0 100px; place-items: center; overflow: hidden; color: #fff; background: linear-gradient(135deg, #159988, #155e75); border: 4px solid #fff; border-radius: 50%; box-shadow: 0 8px 20px rgba(21, 94, 117, .18); font-size: 38px; font-weight: 850; }
+.student-profile-photo .ant-image { width: 100%; height: 100%; cursor: zoom-in; }
+.student-profile-photo .ant-image-img { width: 100%; height: 100%; object-fit: cover; }
+.student-profile-photo .ant-image-mask { border-radius: 50%; font-size: 12px; }
+.student-profile-head small { color: #0f766e; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.student-profile-head h2 { margin: 4px 0; color: #183f4e; font-size: 25px; }
+.student-profile-head p { margin: 0; color: #70858d; }
+.student-profile-gender { align-self: flex-start; padding: 5px 10px; margin-left: auto; color: #155e75; background: #fff; border: 1px solid #c9e3e1; border-radius: 999px; font-size: 12px; font-weight: 750; }
+.student-profile-section { padding: 18px 24px; border-bottom: 1px solid #e5edef; }
+.student-profile-section:last-child { border-bottom: 0; }
+.student-profile-tabs > .ant-tabs-nav { padding: 0 24px; margin: 0; background: #fff; border-bottom: 1px solid #e5edef; }
+.student-profile-tabs .ant-tabs-tab { padding: 13px 4px; font-weight: 700; }
+.student-profile-tabs .ant-tabs-tab-active .ant-tabs-tab-btn { color: #0f766e !important; }
+.student-profile-tabs .ant-tabs-ink-bar { background: #159988; }
+.student-profile-tabs .ant-tabs-content-holder { min-height: 250px; }
+.student-profile-section h3 { margin: 0 0 12px; color: #315865; font-size: 15px; }
+.student-profile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.student-profile-item { display: grid; gap: 5px; padding: 11px 12px; background: #f7fafb; border: 1px solid #e1eaec; border-radius: 9px; }
+.student-profile-item span { color: #81949b; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.student-profile-item strong { overflow: hidden; color: #2d4650; font-size: 14px; font-weight: 650; text-overflow: ellipsis; }
+.student-profile-state { display: grid; min-height: 260px; place-items: center; padding: 20px; color: #71878f; background: #fff; border: 1px solid #d8e5e8; border-radius: 12px; }
+.student-profile-state.error { align-content: center; gap: 10px; color: #a02e35; }
+.student-profile-state.error button { min-height: 36px; padding: 0 12px; color: #fff; background: #159988; border: 0; border-radius: 7px; }
+.student-contracts-tab { padding: 18px 24px 24px; }
+.student-contract-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.student-contract-toolbar h3 { margin: 0; color: #315865; font-size: 16px; }
+.student-contract-toolbar p { margin: 3px 0 0; color: #81949b; font-size: 11px; }
+.student-contract-toolbar > button { min-height: 36px; padding: 0 13px; color: #fff; background: #159988; border: 1px solid #0f766e; border-radius: 8px; font-weight: 750; }
+.student-contract-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.student-contract-stats article { display: grid; gap: 7px; padding: 15px 16px; background: #eaf7f5; border: 1px solid #c5e5e0; border-radius: 10px; }
+.student-contract-stats article.active { background: #e6f6eb; border-color: #c5e5ce; }
+.student-contract-stats article.completed { background: #e8f3f8; border-color: #c9dfe8; }
+.student-contract-stats article.cancelled { background: #fff0ef; border-color: #f1cdca; }
+.student-contract-stats article.amount { background: #fff5dd; border-color: #ecdcae; }
+.student-contract-stats span { color: #688087; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.student-contract-stats strong { color: #194d4d; font-size: 17px; }
+.student-contract-stats .active strong { color: #277045; }
+.student-contract-stats .completed strong { color: #28647b; }
+.student-contract-stats .cancelled strong { color: #9b4141; }
+.student-contract-stats .amount strong { color: #89651d; }
+.contract-table-wrap { overflow-x: auto; }
+.contract-table { width: 100%; border-collapse: collapse; }
+.contract-table th, .contract-table td { padding: 8px; color: #3b4e56; border-bottom: 1px solid #e3ecee; font-size: 13px; text-align: left; }
+.contract-table th { color: #365b67; background: #f4f9f9; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.contract-status { display: inline-flex; padding: 3px 7px; color: #17613c; background: #e7f8ec; border-radius: 999px; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.contract-status.completed { color: #155e75; background: #e5f3f7; }
+.contract-status.cancelled { color: #a02e35; background: #fff0f1; }
+.contract-payment-type { display: inline-flex; padding: 3px 7px; color: #155e75; background: #e5f3f7; border-radius: 999px; font-size: 11px; font-weight: 750; }
+.contract-actions { display: flex; gap: 7px; }
+.contract-actions button { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; color: #0f766e; background: #eaf8f6; border: 1px solid #bce4df; border-radius: 7px; }
+.contract-actions button.danger { color: #a02e35; background: #fff3f3; border-color: #edb8bb; }
+.contract-actions svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.contracts-state { padding: 40px 10px !important; color: #81949b !important; text-align: center !important; }
+.student-payments-tab{display:grid;gap:16px;padding:18px 24px 24px}.student-payment-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.student-payment-toolbar h3{margin:0;color:#315865;font-size:16px}.student-payment-title h3{margin:0;color:#fff;font-size:16px;font-weight:800;letter-spacing:.1px}.student-payment-toolbar p{margin:3px 0 0;color:#81949b;font-size:11px}.student-payment-toolbar>button{min-height:36px;padding:0 13px;color:#fff;background:#159988;border:1px solid #0f766e;border-radius:8px;font-weight:750}.student-payment-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.student-payment-stats article{display:grid;gap:7px;padding:15px 16px;background:#eaf7f5;border:1px solid #c5e5e0;border-radius:10px}.student-payment-stats article.paid{background:#e6f6eb;border-color:#c5e5ce}.student-payment-stats article.debt{background:#fff0ef;border-color:#f1cdca}.student-payment-stats article.overdue{background:#fff5dd;border-color:#ecdcae}.student-payment-stats span{color:#688087;font-size:11px;font-weight:700;text-transform:uppercase}.student-payment-stats strong{color:#194d4d;font-size:17px}.student-payment-stats .paid strong{color:#277045}.student-payment-stats .debt strong{color:#9b4141}.student-payment-stats .overdue strong{color:#89651d}.student-payment-section{overflow:hidden;border:1px solid #c6dcda;border-radius:11px;box-shadow:0 4px 12px rgba(15,118,110,.06)}.student-payment-title{display:flex;min-height:52px;align-items:center;justify-content:space-between;padding:13px 16px;background:linear-gradient(115deg,#368f89,#4caea3);border-bottom:2px solid #2f817b}.student-payment-title span{padding:5px 10px;color:#fff;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:15px;font-size:11px;font-weight:800}.student-payment-table-wrap{overflow-x:auto}.student-payment-table{width:100%;border-collapse:collapse}.student-payment-table th,.student-payment-table td{padding:9px 11px;border-bottom:1px solid #e7eeee;color:#3b525a;font-size:12px;text-align:left}.student-payment-table th{color:#48666d;background:#edf6f5;border-bottom:1px solid #cfe2e0;font-size:10px;font-weight:800;text-transform:uppercase}.student-payment-table tbody tr:last-child td{border-bottom:0}.paid-text{color:#13806f!important}.debt-text{color:#b34a4a!important;font-weight:700}.installment-status{display:inline-flex;padding:4px 7px;color:#a14444;background:#fff0ef;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap}.installment-status.partial{color:#8a6517;background:#fff4d5}.installment-status.paid{color:#19704b;background:#e7f7ed}.student-payment-state{padding:35px!important;color:#81949b!important;text-align:center!important}.student-payment-actions{display:flex;gap:5px}.student-payment-actions button{display:grid;width:28px;height:28px;place-items:center;color:#0f766e;background:#e8f7f4;border:1px solid #bce1dc;border-radius:7px}.student-payment-actions button.danger{color:#a93e46;background:#fff0f1;border-color:#efc8cb;font-size:21px;line-height:1}.student-payment-actions svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.student-payment-modal .ant-input-number{width:100%}.student-method-field{margin-bottom:20px}.student-method-field>label{display:block;margin-bottom:8px;color:#263b45}.student-method-field>div{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;background:#f0f6f5;border:1px solid #bcdad6;border-radius:8px}.student-method-field button{min-height:32px;color:#466067;background:transparent;border:0;border-radius:5px}.student-method-field button.active{color:#fff;background:#159988;font-weight:700}
+.student-payment-toolbar>button:disabled{cursor:not-allowed;opacity:.5}.profile-payment-balance{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;margin:-4px 0 17px;color:#4c6a70;background:#edf9f7;border:1px solid #c5e7e1;border-radius:8px}.profile-payment-balance span{font-size:12px}.profile-payment-balance strong{color:#0f6f67}.student-payment-modal .ant-btn-primary{background:#159988}
+.student-payment-table tbody tr:nth-child(even) td{background:#f1f8f7}.student-payment-table tbody tr:nth-child(odd) td{background:#fff}
+.student-payment-stats article.upcoming{background:#edf1fb;border-color:#d4dcf0}.student-payment-stats .upcoming strong{color:#4a5f91}
+.installment-status.upcoming{color:#526b91;background:#edf2fb}
+.installment-status.cancelled{color:#7b6464;background:#f1ecec}
+.contract-form-modal .ant-modal-content { background: #fff; border: 1px solid #d8e5e8; }
+.contract-form-modal .ant-modal-header { padding-bottom: 9px; margin-bottom: 12px; border-bottom: 1px solid #e1eaec; }
+.contract-form-modal .ant-modal-title { color: #183f4e; font-weight: 750; }
+.contract-form-modal .ant-input, .contract-form-modal .ant-input-number, .contract-form-modal .ant-picker { border-color: #cbdde1 !important; }
+.contract-form-modal .ant-form-vertical .ant-form-item { margin-bottom: 12px; }
+.contract-form-modal .ant-form-vertical .ant-form-item-label { padding: 0 0 3px; }
+.contract-form-modal .ant-form-item-label > label { min-height: auto; font-size: 12px; line-height: 1.2; }
+.contract-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.contract-room-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px; }
+.contract-room-picker button { display: grid; grid-template-areas: "room free" "location free"; grid-template-columns: minmax(0, 1fr) auto; width: 135px; min-height: 46px; align-items: center; gap: 1px 4px; padding: 6px 7px; color: #486067; background: #fff; border: 1px solid #d5e3e4; border-radius: 7px; text-align: left; transition: .16s; }
+.contract-room-picker button:hover { border-color: #67bcb1; background: #f0fbf8; }
+.contract-room-filter { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.contract-room-filter > span { color: #263b45; font-size: 12px; }
+.contract-room-filter .ant-select { width: 145px; }
+.contract-room-picker button.selected { color: #fff; background: #159988; border-color: #0f766e; box-shadow: 0 4px 10px rgba(15,118,110,.18); }
+.contract-room-picker strong { grid-area: room; font-size: 11px; }
+.contract-room-picker span, .contract-room-picker small { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.contract-room-picker span { grid-area: location; color: #7b8e93; }
+.contract-room-picker small { grid-area: free; padding: 2px 5px; color: #16806e; background: #eaf8f4; border-radius: 10px; font-weight: 700; }
+.contract-room-picker button.selected span, .contract-room-picker button.selected small { color: #e8fffb; }
+.contract-room-picker button.selected small { background: rgba(255, 255, 255, .16); }
+.contract-room-empty { padding: 20px; color: #87979c; background: #f7fafb; border: 1px dashed #cbdadd; border-radius: 9px; text-align: center; }
+.contract-bed-picker { display: grid; gap: 7px; margin: 10px 0 16px; padding: 10px; background: #f7fbfa; border: 1px solid #d6e8e4; border-radius: 9px; }
+.contract-bed-picker > span { color: #30545a; font-size: 12px; font-weight: 700; }
+.contract-bed-picker > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.contract-bed-picker button { min-width: 34px; width: auto; height: 32px; padding: 0 9px; border-radius: 7px; font-size: 12px; font-weight: 800; }
+.contract-bed-picker button.available { color: #087f2a; background: #e4f8e9; border: 1px solid #9bdcb0; }
+.contract-bed-picker button.occupied { color: #b74a5e; background: #ffe5ea; border: 1px solid #efb4c0; cursor: not-allowed; }
+.contract-bed-picker button.selected { color: #fff; background: #159988; border-color: #0f766e; box-shadow: 0 3px 8px rgba(15,118,110,.2); }
+.contract-bed-picker small { color: #70878b; font-size: 10px; }
+.contract-status-segmented .ant-segmented-item-selected { color: #fff; background: #155e75; }
+.contract-form-actions { display: flex; gap: 8px; margin-top: 12px; }
+.contract-payment-calculation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; margin-bottom: 16px; background: #eef9f7; border: 1px solid #bce4df; border-radius: 10px; }
+.contract-payment-calculation div { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+.contract-payment-calculation span { color: #687d85; font-size: 12px; }
+.contract-payment-calculation strong { color: #0f5f5a; font-size: 15px; }
+.contract-payment-note { padding: 10px 12px; margin: -8px 0 16px; color: #526b74; background: #f7fafb; border-left: 3px solid #159988; border-radius: 4px; font-size: 13px; }
+.contract-submit-btn { color: #fff !important; background: #159988 !important; border-color: #0f766e !important; font-weight: 700; }
+.contract-pdf-viewer { position: fixed; inset: 0; z-index: 2000; display: grid; grid-template-rows: 56px minmax(0, 1fr); width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #303438; }
+.contract-pdf-toolbar { display: flex; align-items: center; justify-content: space-between; min-width: 0; padding: 0 22px; color: #fff; background: #202428; border-bottom: 1px solid #4a5055; }
+.contract-pdf-toolbar strong { font-size: 16px; }
+.contract-pdf-toolbar button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; color: #fff; background: transparent; border: 0; border-radius: 8px; font: 300 30px/1 Arial, sans-serif; cursor: pointer; }
+.contract-pdf-toolbar button:hover { background: rgba(255, 255, 255, .12); }
+.contract-print-source { display: none; }
+.contract-download-source { position: fixed; top: 0; left: -300mm; width: 210mm; pointer-events: none; }
+.contract-a4-scroll { width: 100%; height: 100%; box-sizing: border-box; padding: 24px; overflow-x: hidden; overflow-y: auto; background: #303438; }
+.contract-a4 { width: min(210mm, 100%); min-height: 297mm; box-sizing: border-box; padding: 16mm 18mm; margin: 0 auto; color: #111; background: #fff; box-shadow: 0 4px 18px rgba(24, 63, 78, .15); font-family: "Times New Roman", Times, serif; font-size: 11.5px; line-height: 1.42; }
+.contract-document-header { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding-bottom: 16px; border-bottom: 1.5px solid #222; text-align: center; }
+.contract-document-header > div { min-width: 0; }
+.contract-document-header > div > p { text-align: center; }
+.contract-document-header img { width: 54px; height: 54px; object-fit: contain; }
+.contract-document-header h1 { margin: 0 0 9px; font-size: 18px; text-transform: uppercase; }
+.contract-document-header p { margin: 4px 0; font-size: 10px; text-align: center; }
+.contract-a4 > h2 { margin: 14px 0 9px; font-size: 15px; text-align: center; }
+.contract-document-meta { display: flex; justify-content: space-between; margin-bottom: 11px; }
+.contract-a4 p { margin: 4px 0; text-align: left; }
+.contract-a4 section { margin-top: 9px; break-inside: avoid; }
+.contract-a4 section h3 { margin: 0 0 4px; font-size: 11.5px; text-align: center; }
+.contract-requisites > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin-top: 9px; }
+.contract-requisites > div > div { min-height: 105px; padding: 8px; border: 1px solid #777; }
+.contract-requisites span { display: block; margin-top: 15px; }
+@media print {
+  .contract-a4, .contract-a4 * { visibility: visible !important; }
+  .contract-a4 { display: block !important; width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0; color: #111 !important; background: #fff !important; box-shadow: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@media (max-width: 700px) {
+  .student-profile-toolbar { align-items: stretch; }
+  .student-profile-toolbar > div { margin-left: auto; }
+  .student-profile-back, .student-profile-edit, .student-profile-delete { min-width: 34px; padding: 0 9px; gap: 0; }
+  .student-profile-back { font-size: 0; }
+  .student-profile-edit, .student-profile-delete { font-size: 0; }
+  .student-profile-back .anticon { font-size: 18px; }
+  .student-profile-head { min-height: 0; align-items: center; justify-content: flex-start; gap: 12px; padding: 12px; }
+  .student-profile-photo { width: 72px; height: 72px; flex-basis: 72px; }
+  .student-profile-head small,
+  .student-profile-head p,
+  .student-profile-gender { display: none; }
+  .student-profile-head h2 { margin: 0; font-size: 19px; line-height: 1.2; }
+  .student-profile-head > div:last-child { min-width: 0; }
+  .student-profile-section { padding: 14px; }
+  .student-profile-grid { grid-template-columns: 1fr; }
+  .student-profile-grid { gap: 0; background: #f7fafb; border: 1px solid #e1eaec; border-radius: 9px; overflow: hidden; }
+  .student-profile-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; background: transparent; border: 0; border-bottom: 1px solid #e1eaec; border-radius: 0; }
+  .student-profile-item:last-child { border-bottom: 0; }
+  .student-profile-item span { flex: 0 0 auto; }
+  .student-profile-item strong { flex: 1; text-align: right; }
+  .student-profile-tabs > .ant-tabs-nav { padding: 0 14px; overflow-x: auto; overflow-y: hidden; }
+  .student-profile-tabs > .ant-tabs-nav .ant-tabs-nav-wrap { overflow: visible !important; }
+  .student-profile-tabs > .ant-tabs-nav .ant-tabs-nav-list { flex-wrap: nowrap; width: max-content; min-width: 100%; }
+  .student-profile-tabs > .ant-tabs-nav .ant-tabs-tab { flex: 0 0 auto; }
+  .student-contracts-tab { padding: 14px; }
+  .contract-room-picker button { width: 135px; max-width: 100%; min-width: 0; }
+  .student-contract-stats { grid-template-columns: 1fr; gap: 8px; }
+  .student-contract-stats article { min-height: 0; gap: 4px; padding: 11px 12px; }
+  .student-contract-stats span { font-size: 10px; }
+  .student-contract-stats strong { font-size: 14px; line-height: 1.25; }
+  .student-payments-tab{padding:14px}.student-payment-toolbar{align-items:stretch;flex-direction:column}.student-payment-stats{grid-template-columns:1fr;gap:8px}.student-payment-stats article{min-height:0;gap:4px;padding:11px 12px}.student-payment-stats span{font-size:10px}.student-payment-stats strong{font-size:14px;line-height:1.25}.student-payment-title{min-height:44px;padding:9px 12px}.student-payment-title h3{font-size:14px}.student-payment-title span{padding:4px 9px;font-size:10px}.student-payment-table,.student-payment-table tbody{display:block;width:100%}.student-payment-table thead{display:none}.student-payment-table tbody{display:grid;gap:8px;padding:8px}.student-payment-table tr{display:block;padding:7px 9px;border:1px solid #d8e5e8;border-radius:9px}.student-payment-table td{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 1px;border:0;border-bottom:1px solid #e6eeef;background:transparent!important}.student-payment-table td:last-child{border-bottom:0}.student-payment-table tbody tr:nth-child(even){background:#f1f8f7}.student-payment-table tbody tr:nth-child(odd){background:#fff}.student-payment-table td::before{content:attr(data-label);color:#37616c;font-size:10px;font-weight:800;text-transform:uppercase}.student-payment-table .student-payment-state{display:block}.student-payment-table .student-payment-state::before{content:none}
+  .student-contract-toolbar { align-items: stretch; flex-direction: column; }
+  .contract-form-grid { grid-template-columns: 1fr; gap: 0; }
+  .contract-payment-calculation { grid-template-columns: 1fr; }
+  .contract-table, .contract-table tbody { display: block; width: 100%; }
+  .contract-table thead { display: none; }
+  .contract-table tbody { display: grid; gap: 8px; }
+  .contract-table tr { display: block; padding: 7px 9px; border: 1px solid #d8e5e8; border-radius: 9px; }
+  .contract-table td { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 1px; border: 0; border-bottom: 1px solid #e6eeef; }
+  .contract-table td:last-child { border-bottom: 0; }
+  .contract-table td::before { content: attr(data-label); color: #37616c; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  .contract-form-modal .ant-modal { top: 0; max-width: 100vw; padding-bottom: 0; margin: 0; }
+  .contract-form-modal .ant-modal-content { min-height: 100vh; min-height: 100dvh; border-radius: 0; border: 0; }
+  .contract-form-modal .ant-modal-header { padding: 14px 14px 8px; margin-bottom: 10px; }
+  .contract-form-modal .ant-modal-body { padding: 0 14px 14px; }
+  .contract-form-modal .ant-form-vertical .ant-form-item { margin-bottom: 10px; }
+  .contract-form-modal .ant-form-vertical .ant-form-item-label { padding-bottom: 2px; }
+  .contract-form-modal .ant-form-item-label > label { font-size: 11px; }
+  .contract-pdf-viewer { grid-template-rows: calc(50px + env(safe-area-inset-top, 0px)) minmax(0, 1fr); }
+  .contract-pdf-toolbar { padding: env(safe-area-inset-top, 0px) 10px 0 14px; }
+  .contract-pdf-toolbar strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+  .contract-pdf-toolbar button { width: 38px; height: 38px; flex: 0 0 38px; font-size: 28px; }
+  .contract-a4-scroll { padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .contract-a4 { width: 100%; min-height: 0; padding: 20px 16px 28px; overflow-wrap: anywhere; box-shadow: none; font-size: 12px; line-height: 1.5; }
+  .contract-document-header { gap: 9px; padding-bottom: 11px; }
+  .contract-document-header img { width: 44px; height: 44px; }
+  .contract-document-header h1 { margin-bottom: 5px; font-size: 16px; }
+  .contract-document-header p { margin: 2px 0; font-size: 10px; }
+  .contract-a4 > h2 { margin: 12px 0 10px; font-size: 14px; line-height: 1.35; }
+  .contract-document-meta { gap: 12px; margin-bottom: 10px; font-size: 11px; }
+  .contract-a4 p { margin: 5px 0; }
+  .contract-a4 section { margin-top: 12px; }
+  .contract-a4 section h3 { font-size: 12px; line-height: 1.35; }
+  .contract-requisites > div { grid-template-columns: 1fr; gap: 10px; }
+  .contract-requisites > div > div { min-height: 0; padding: 10px; }
+  .student-payment-modal .ant-modal { top: 0; max-width: 100vw; padding-bottom: 0; margin: 0; }
+  .student-payment-modal .ant-modal-content { min-height: 100vh; min-height: 100dvh; padding: 14px; border-radius: 0; border: 0; }
+  .student-payment-modal .ant-modal-header { padding: 0 0 8px; margin-bottom: 10px; }
+  .student-payment-modal .ant-modal-body { padding: 0; }
+  .student-payment-modal .ant-form-vertical .ant-form-item { margin-bottom: 10px; }
+  .student-payment-modal .ant-form-vertical .ant-form-item-label { padding-bottom: 2px; }
+  .student-payment-modal .ant-form-item-label > label { font-size: 11px; }
+  .student-payment-modal .ant-input,
+  .student-payment-modal .ant-input-number,
+  .student-payment-modal .ant-select-selector { min-height: 32px !important; }
+  .student-method-field { margin-bottom: 12px; }
+  .student-method-field > label { margin-bottom: 4px; font-size: 11px; }
+  .student-method-field > div { display: flex; justify-content: space-between; grid-template-columns: none; gap: 4px; padding: 4px; overflow-x: auto; }
+  .student-method-field > div::-webkit-scrollbar { display: none; }
+  .student-method-field button { min-width: max-content; min-height: 30px; padding: 0 10px; font-size: 12px; white-space: nowrap; }
+  .profile-payment-balance { padding: 9px 10px; margin: -2px 0 12px; }
+  .profile-payment-balance span { font-size: 11px; }
+  .payment-modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 10px; }
+  .payment-modal-actions .ant-btn { width: 100%; min-height: 32px; }
+}
+
+/* PDF yuklash manbasi ekran o‘lchamidan qat’i nazar bir xil A4 maketda qoladi. */
+.contract-download-source .contract-a4 { width: 210mm; min-height: 297mm; padding: 16mm 18mm; overflow-wrap: normal; font-size: 11.5px; line-height: 1.42; }
+.contract-download-source .contract-document-header { gap: 20px; padding-bottom: 16px; }
+.contract-download-source .contract-document-header img { width: 54px; height: 54px; }
+.contract-download-source .contract-document-header h1 { margin: 0 0 9px; font-size: 18px; }
+.contract-download-source .contract-document-header p { margin: 4px 0; font-size: 10px; }
+.contract-download-source .contract-a4 > h2 { margin: 14px 0 9px; font-size: 15px; line-height: 1.42; }
+.contract-download-source .contract-document-meta { margin-bottom: 11px; font-size: inherit; }
+.contract-download-source .contract-a4 p { margin: 4px 0; }
+.contract-download-source .contract-a4 section { margin-top: 9px; }
+.contract-download-source .contract-a4 section h3 { font-size: 11.5px; line-height: 1.42; }
+.contract-download-source .contract-requisites > div { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.contract-download-source .contract-requisites > div > div { min-height: 105px; padding: 8px; }
+.contract-download-source .contract-requisites { break-before: auto; break-inside: auto; page-break-before: auto; page-break-inside: auto; }
+
+/* Mobil chop etishda ham responsive ekran maketi emas, A4 maketi ishlaydi. */
+@media print {
+  .contract-a4, .contract-a4 * { visibility: visible !important; }
+  .contract-a4 { display: block !important; width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0; overflow-wrap: normal; color: #111 !important; background: #fff !important; box-shadow: none; font-size: 11.5px; line-height: 1.42; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .contract-document-header { gap: 20px; padding-bottom: 16px; }
+  .contract-document-header img { width: 54px; height: 54px; }
+  .contract-document-header h1 { margin: 0 0 9px; font-size: 18px; }
+  .contract-document-header p { margin: 4px 0; font-size: 10px; }
+  .contract-a4 > h2 { margin: 14px 0 9px; font-size: 15px; line-height: 1.42; }
+  .contract-document-meta { margin-bottom: 11px; font-size: inherit; }
+  .contract-a4 p { margin: 4px 0; }
+  .contract-a4 section { margin-top: 9px; }
+  .contract-a4 section h3 { font-size: 11.5px; line-height: 1.42; }
+  .contract-requisites > div { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+  .contract-requisites > div > div { min-height: 105px; padding: 8px; }
+  .contract-requisites { break-before: auto; break-inside: auto; page-break-before: auto; page-break-inside: auto; }
+}

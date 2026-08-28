@@ -1,0 +1,28 @@
+.cash-note {
+  display: block;
+  max-width: 240px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.cash-sent-note {
+  margin: -5px 0 16px;
+  padding: 12px 14px;
+  background: #fff8e8;
+  border: 1px solid #eadcb5;
+  border-radius: 9px;
+}
+
+.cash-sent-note span {
+  color: #806a36;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cash-sent-note p {
+  margin: 5px 0 0;
+  color: #4d5f63;
+  font-size: 13px;
+  white-space: pre-wrap;
+}

@@ -1,0 +1,8 @@
+.students-module {
+  margin-top: calc(clamp(10px, 2vw, 18px) * -1 + 4px);
+}
+
+.students-tabs button {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}

@@ -11,6 +11,7 @@ export const navigationItems = [
   { id: 'fines', path: '/fines', icon: 'fines', label: 'Jarimalar' },
   { id: 'employees', path: '/employees', icon: 'employees', label: 'Xodimlar' },
   { id: 'salaries', path: '/salaries', icon: 'salaries', label: 'Oyliklar' },
+  { id: 'shop', path: '/shop', icon: 'shop', label: 'Do‘kon' },
   { id: 'expenses', path: '/expenses', icon: 'expenses', label: 'Xarajatlar' },
   { id: 'reports', path: '/reports', icon: 'reports', label: 'Hisobot' },
   { id: 'settings', path: '/settings', icon: 'settings', label: 'Sozlamalar' },

@@ -23,6 +23,7 @@ import { DashboardPage } from './components/dashboard/DashboardPage'
 import { ReportsPage } from './components/reports/ReportsPage'
 import { CashPage } from './components/cash/CashPage'
 import { FaceAccessPage } from './components/faceAccess/FaceAccessPage'
+import { ShopPage } from './components/shop/ShopPage'
 import { baseApi, useGetGeneralSettingsQuery, useGetMeQuery } from './store/baseApi'
 import { LoginPage } from './components/auth/LoginPage'
 import './App.css'
@@ -85,6 +86,7 @@ function App() {
               <Route path="/fines" element={guard('fines', <FinesPage currentEmployee={meData.employee} />)} />
               <Route path="/employees" element={guard('employees', <EmployeesPage currentEmployee={meData.employee} />)} />
               <Route path="/salaries" element={guard('salaries', <SalariesPage currentEmployee={meData.employee} />)} />
+              <Route path="/shop" element={guard('shop', <ShopPage currentEmployee={meData.employee} />)} />
               <Route path="/expenses" element={guard('expenses', <ExpensesPage currentEmployee={meData.employee} />)} />
               <Route path="/reports" element={guard('reports', <ReportsPage />)} />
               <Route path="/settings" element={guard('settings', <Navigate to="/settings/general" replace />)} />

@@ -64,7 +64,7 @@ const scheduleInvalidate = (dispatch, tags, key, delay = 250) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: guardedBaseQuery,
-  tagTypes: ['Dashboard', 'Report', 'Employee', 'Room', 'Student', 'StudentContract', 'Payment', 'Debtor', 'Attendance', 'EmployeeAttendance', 'FaceAccess', 'FaceDevice', 'Expense', 'Fine', 'Salary', 'University', 'Faculty', 'BuildingBlock', 'GeneralSetting', 'Notification', 'CashSession'],
+  tagTypes: ['Dashboard', 'Report', 'Employee', 'Room', 'Student', 'StudentContract', 'Payment', 'Debtor', 'Attendance', 'EmployeeAttendance', 'FaceAccess', 'FaceDevice', 'Expense', 'Fine', 'Salary', 'Shop', 'University', 'Faculty', 'BuildingBlock', 'GeneralSetting', 'Notification', 'CashSession'],
   endpoints: (builder) => ({
     getDashboard: builder.query({
       query: ({ period, date, startDate, endDate } = {}) => ({ url: '/dashboard', params: { ...(period ? { period } : {}), ...(date ? { date } : {}), ...(startDate ? { startDate } : {}), ...(endDate ? { endDate } : {}) } }),
@@ -111,7 +111,10 @@ export const baseApi = createApi({
       transformResponse: (response) => response.data,
     }),
     getEmployees: builder.query({
-      query: (search = '') => ({ url: '/employees', params: search ? { search } : undefined }),
+      query: (argument = '') => {
+        const options = typeof argument === 'string' ? { search: argument } : argument || {}
+        return { url: '/employees', params: { ...(options.search ? { search: options.search } : {}), ...(options.businessUnit ? { businessUnit: options.businessUnit } : {}) } }
+      },
       transformResponse: (response) => response.data,
       providesTags: (result) => [
         { type: 'Employee', id: 'LIST' },
@@ -145,12 +148,15 @@ export const baseApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Employee', id }, { type: 'Employee', id: 'LIST' }],
     }),
     deleteEmployee: builder.mutation({
-      query: (id) => ({ url: `/employees/${id}`, method: 'DELETE' }),
+      query: (argument) => ({ url: `/employees/${typeof argument === 'string' ? argument : argument.id}`, method: 'DELETE' }),
       transformResponse: (response) => response.data,
       invalidatesTags: (_result, _error, id) => [{ type: 'Employee', id }, { type: 'Employee', id: 'LIST' }],
     }),
     getSalaries: builder.query({
-      query: (period) => ({ url: '/salaries', params: period ? { period } : undefined }),
+      query: (argument) => {
+        const options = typeof argument === 'string' ? { period: argument } : argument || {}
+        return { url: '/salaries', params: { ...(options.period ? { period: options.period } : {}), ...(options.businessUnit ? { businessUnit: options.businessUnit } : {}) } }
+      },
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'Salary', id: 'SUMMARY' }],
       async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
@@ -171,8 +177,53 @@ export const baseApi = createApi({
       invalidatesTags: [{ type: 'Salary', id: 'SUMMARY' }, { type: 'Salary', id: 'HISTORY' }],
     }),
     deleteSalaryPayment: builder.mutation({
-      query: (id) => ({ url: `/salaries/payments/${id}`, method: 'DELETE' }),
+      query: (argument) => {
+        const options = typeof argument === 'string' ? { id: argument } : argument
+        return { url: `/salaries/payments/${options.id}`, method: 'DELETE', params: options.businessUnit ? { businessUnit: options.businessUnit } : undefined }
+      },
       invalidatesTags: [{ type: 'Salary', id: 'SUMMARY' }, { type: 'Salary', id: 'HISTORY' }],
+    }),
+    createEmployeeBonus: builder.mutation({
+      query: (body) => ({ url: '/salaries/bonuses', method: 'POST', body }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: [{ type: 'Salary', id: 'SUMMARY' }, { type: 'Salary', id: 'HISTORY' }],
+    }),
+    deleteEmployeeBonus: builder.mutation({
+      query: (argument) => {
+        const options = typeof argument === 'string' ? { id: argument } : argument
+        return { url: `/salaries/bonuses/${options.id}`, method: 'DELETE', params: options.businessUnit ? { businessUnit: options.businessUnit } : undefined }
+      },
+      invalidatesTags: [{ type: 'Salary', id: 'SUMMARY' }, { type: 'Salary', id: 'HISTORY' }],
+    }),
+    getShopOverview: builder.query({
+      query: (period) => ({ url: '/shop/overview', params: period ? { period } : undefined }),
+      transformResponse: (response) => response.data,
+      providesTags: [{ type: 'Shop', id: 'OVERVIEW' }],
+      async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
+        const refresh = () => scheduleInvalidate(dispatch, [{ type: 'Shop', id: 'OVERVIEW' }, { type: 'Shop', id: 'TRANSACTIONS' }], 'Shop:ALL')
+        const unsubscribe = subscribeSocket(['shop:changed', 'salaries:changed'], refresh)
+        await cacheEntryRemoved
+        unsubscribe()
+      },
+    }),
+    getShopTransactions: builder.query({
+      query: (params = {}) => ({ url: '/shop/transactions', params }),
+      transformResponse: (response) => response.data,
+      providesTags: [{ type: 'Shop', id: 'TRANSACTIONS' }],
+    }),
+    createShopTransaction: builder.mutation({
+      query: (body) => ({ url: '/shop/transactions', method: 'POST', body }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: [{ type: 'Shop', id: 'OVERVIEW' }, { type: 'Shop', id: 'TRANSACTIONS' }],
+    }),
+    updateShopTransaction: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/shop/transactions/${id}`, method: 'PUT', body }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: [{ type: 'Shop', id: 'OVERVIEW' }, { type: 'Shop', id: 'TRANSACTIONS' }],
+    }),
+    deleteShopTransaction: builder.mutation({
+      query: (id) => ({ url: `/shop/transactions/${id}`, method: 'DELETE' }),
+      invalidatesTags: [{ type: 'Shop', id: 'OVERVIEW' }, { type: 'Shop', id: 'TRANSACTIONS' }],
     }),
     getRooms: builder.query({
       query: (period) => ({ url: '/rooms', params: period ? { period } : undefined }),
@@ -385,10 +436,14 @@ export const baseApi = createApi({
       ],
     }),
     getEmployeeAttendance: builder.query({
-      query: (date) => ({ url: '/employee-attendance', params: date ? { date } : undefined }),
+      query: (argument) => {
+        const options = typeof argument === 'string' ? { date: argument } : argument || {}
+        return { url: '/employee-attendance', params: { ...(options.date ? { date: options.date } : {}), ...(options.businessUnit ? { businessUnit: options.businessUnit } : {}) } }
+      },
       transformResponse: (response) => response.data,
-      providesTags: (_result, _error, date) => [{ type: 'EmployeeAttendance', id: date || 'TODAY' }],
-      async onCacheEntryAdded(date, { cacheEntryRemoved, dispatch }) {
+      providesTags: (_result, _error, argument) => [{ type: 'EmployeeAttendance', id: (typeof argument === 'string' ? argument : argument?.date) || 'TODAY' }],
+      async onCacheEntryAdded(argument, { cacheEntryRemoved, dispatch }) {
+        const date = typeof argument === 'string' ? argument : argument?.date
         const refresh = (event) => {
           if (!date || event?.date === date) scheduleInvalidate(dispatch, [{ type: 'EmployeeAttendance', id: date || 'TODAY' }, { type: 'Salary', id: 'SUMMARY' }], `EmployeeAttendance:${date || 'TODAY'}`)
         }
@@ -401,6 +456,15 @@ export const baseApi = createApi({
       query: ({ employeeId, month }) => ({ url: `/employee-attendance/${employeeId}/history`, params: { month } }),
       transformResponse: (response) => response.data,
       providesTags: (_result, _error, { employeeId, month }) => [{ type: 'EmployeeAttendance', id: `HISTORY-${employeeId}-${month}` }],
+    }),
+    waiveEmployeeAttendancePenalty: builder.mutation({
+      query: ({ employeeId, date, reason }) => ({ url: `/employee-attendance/${employeeId}/${date}/penalty-waiver`, method: 'POST', body: { reason } }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: (_result, _error, { employeeId, date }) => [
+        { type: 'EmployeeAttendance', id: date },
+        { type: 'EmployeeAttendance', id: `HISTORY-${employeeId}-${date.slice(0, 7)}` },
+        { type: 'Salary', id: 'SUMMARY' },
+      ],
     }),
     getExpenses: builder.query({
       query: (params = {}) => ({ url: '/expenses', params }),
@@ -626,6 +690,28 @@ export const baseApi = createApi({
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'FaceAccess', id: 'STATES' }],
     }),
+    getStudentPresence: builder.query({
+      query: () => '/face-access/presence',
+      transformResponse: (response) => response.data,
+      providesTags: [{ type: 'FaceAccess', id: 'PRESENCE' }],
+      async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
+        const refresh = () => scheduleInvalidate(dispatch, [{ type: 'FaceAccess', id: 'PRESENCE' }], 'FaceAccess:PRESENCE')
+        const unsubscribe = subscribeSocket(['student-presence:changed', 'student-contracts:changed'], refresh)
+        await cacheEntryRemoved
+        unsubscribe()
+      },
+    }),
+    getStudentStaySessions: builder.query({
+      query: (params = {}) => ({ url: '/face-access/sessions', params }),
+      transformResponse: (response) => response.data,
+      providesTags: [{ type: 'FaceAccess', id: 'SESSIONS' }],
+      async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
+        const refresh = () => scheduleInvalidate(dispatch, [{ type: 'FaceAccess', id: 'SESSIONS' }], 'FaceAccess:SESSIONS')
+        const unsubscribe = subscribeSocket(['student-presence:changed'], refresh)
+        await cacheEntryRemoved
+        unsubscribe()
+      },
+    }),
     resetFaceAccessState: builder.mutation({
       query: (studentId) => ({ url: `/face-access/students/${studentId}/reset`, method: 'POST' }),
       transformResponse: (response) => response.data,
@@ -665,6 +751,13 @@ export const {
   useGetSalaryHistoryQuery,
   useCreateSalaryPaymentMutation,
   useDeleteSalaryPaymentMutation,
+  useCreateEmployeeBonusMutation,
+  useDeleteEmployeeBonusMutation,
+  useGetShopOverviewQuery,
+  useGetShopTransactionsQuery,
+  useCreateShopTransactionMutation,
+  useUpdateShopTransactionMutation,
+  useDeleteShopTransactionMutation,
   useGetRoomsQuery,
   useGetRoomStudentsQuery,
   useCreateRoomMutation,
@@ -696,6 +789,7 @@ export const {
   useSaveAttendanceMutation,
   useGetEmployeeAttendanceQuery,
   useGetEmployeeAttendanceHistoryQuery,
+  useWaiveEmployeeAttendancePenaltyMutation,
   useGetExpensesQuery,
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
@@ -732,6 +826,8 @@ export const {
   useApproveCashSessionMutation,
   useGetFaceAccessEventsQuery,
   useGetFaceAccessStatesQuery,
+  useGetStudentPresenceQuery,
+  useGetStudentStaySessionsQuery,
   useResetFaceAccessStateMutation,
   useGetFaceDevicesQuery,
   useCreateFaceDeviceMutation,

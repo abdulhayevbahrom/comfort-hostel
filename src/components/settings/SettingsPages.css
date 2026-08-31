@@ -38,8 +38,8 @@
 .faculty-list-summary span { font-size: 12px; font-weight: 750; text-transform: uppercase; }
 .faculty-list-summary strong { overflow: hidden; color: #183f4e; text-overflow: ellipsis; white-space: nowrap; }
 .faculty-list-summary b { flex: 0 0 auto; padding: 4px 8px; margin-left: auto; color: #0f766e; background: #fff; border-radius: 999px; font-size: 12px; }
-.general-settings-card { max-width: 850px; }
-.general-settings-form { max-width: 680px; }
+.general-settings-card { max-width: 980px; }
+.general-settings-form { max-width: 820px; }
 .general-setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .setting-logo-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
 .setting-logo-row .ant-upload-wrapper { width: auto; }
@@ -49,6 +49,11 @@
 .receipt-preview { padding: 13px 15px; margin-top: 4px; background: #f2f9f8; border: 1px dashed #b8dcd7; border-radius: 9px; text-align: center; }
 .receipt-preview span { color: #6f858d; font-size: 11px; font-weight: 750; letter-spacing: .3px; text-transform: uppercase; }
 .receipt-preview p { margin: 7px 0 0; color: #155e75; font-size: 15px; font-weight: 650; }
+.general-employee-schedule { padding: 20px; margin-top: 22px; background: #f3f9f8; border: 1px solid #d2e7e4; border-radius: 12px; }
+.general-setting-section-title { margin-bottom: 16px; }
+.general-setting-section-title h3 { margin: 0 0 4px; color: #285d67; font-size: 19px; }
+.general-setting-section-title p { margin: 0; color: #718990; font-size: 13px; }
+.schedule-mode-note { padding: 11px 13px; color: #42646d; background: #fff; border-left: 3px solid #159988; border-radius: 7px; font-size: 13px; line-height: 1.5; }
 @media (max-width: 1000px) {
   .directory-toolbar { align-items: stretch; flex-direction: column; }
   .directory-toolbar-actions { width: 100%; }

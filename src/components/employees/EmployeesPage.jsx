@@ -8,6 +8,7 @@ import {
   useCreateEmployeeMutation,
   useDeleteEmployeeMutation,
   useGetEmployeesQuery,
+  useGetGeneralSettingsQuery,
   useGetRoomsQuery,
   useUpdateEmployeeMutation,
 } from '../../store/baseApi'
@@ -28,19 +29,7 @@ const initialForm = {
   sections: [],
   assignedRooms: [],
   faceAccessEnabled: true,
-  workSchedule: {
-    checkInTime: '09:00',
-    checkOutTime: '18:00',
-    workDays: [1, 2, 3, 4, 5, 6],
-    lateAfterMinutes: 0,
-    earlyLeaveMinutes: 0,
-    useTimePenalty: false,
-    penaltyPerMinute: 0,
-    penaltyStartDate: dayjs().format('YYYY-MM-DD'),
-  },
 }
-
-const workDayOptions = [{ label: 'Du', value: 1 }, { label: 'Se', value: 2 }, { label: 'Ch', value: 3 }, { label: 'Pa', value: 4 }, { label: 'Ju', value: 5 }, { label: 'Sh', value: 6 }, { label: 'Ya', value: 0 }]
 
 const sectionOptions = [
   { label: 'Bosh sahifa', value: 'dashboard' },
@@ -54,6 +43,7 @@ const sectionOptions = [
   { label: 'Qarzdorlar', value: 'debtors' },
   { label: 'Xodimlar', value: 'employees' },
   { label: 'Oyliklar', value: 'salaries' },
+  { label: 'Do‘kon', value: 'shop' },
   { label: 'Xarajatlar', value: 'expenses' },
   { label: 'Hisobot', value: 'reports' },
   { label: 'Sozlamalar', value: 'settings' },
@@ -61,15 +51,15 @@ const sectionOptions = [
 
 const sectionLabels = new Map(sectionOptions.map((item) => [item.value, item.label]))
 
-const EmployeeRow = memo(function EmployeeRow({ employee, isDeleting, canManage, onEdit, onManageRooms, onDelete }) {
+const EmployeeRow = memo(function EmployeeRow({ employee, schedule, isShop, isDeleting, canManage, onEdit, onManageRooms, onDelete }) {
   return (
     <tr>
       <td data-label="F.I.SH"><strong>{employee.firstname} {employee.lastname}</strong><small className="employee-face-code">{employee.faceIdCode || 'FaceID kodi yo‘q'}</small></td>
-      <td data-label="Lavozim">{employee.position}</td>
+      <td data-label="Lavozim"><strong>{employee.position}</strong><small className="employee-work-time">Umumiy grafik: {schedule?.checkInTime || '09:00'}–{schedule?.checkOutTime || '18:00'}</small></td>
       <td data-label="Oylik">{Number(employee.salary || 0).toLocaleString('uz-UZ')}</td>
-      <td data-label="Rol"><span className={`employee-role ${employee.role}`}>{employee.role === 'owner' || employee.role === 'admin' ? 'Owner' : employee.role === 'manager' ? 'Menejer' : employee.role === 'cashier' ? 'Kassir' : 'Xodim'}</span></td>
-      <td data-label="Login">{employee.login || '-'}</td>
-      <td data-label="Ruxsatlar">
+      {!isShop && <td data-label="Rol"><span className={`employee-role ${employee.role}`}>{employee.role === 'owner' || employee.role === 'admin' ? 'Owner' : employee.role === 'manager' ? 'Menejer' : employee.role === 'cashier' ? 'Kassir' : 'Xodim'}</span></td>}
+      {!isShop && <td data-label="Login">{employee.login || '-'}</td>}
+      {!isShop && <td data-label="Ruxsatlar">
         {(employee.sections || []).length ? (
           <Popover
             trigger="click"
@@ -83,10 +73,10 @@ const EmployeeRow = memo(function EmployeeRow({ employee, isDeleting, canManage,
             </button>
           </Popover>
         ) : '-'}
-      </td>
-      <td data-label="Biriktirilgan xonalar">
+      </td>}
+      {!isShop && <td data-label="Biriktirilgan xonalar">
         {canManage ? <button className="section-view-btn" type="button" onClick={() => onManageRooms(employee)}><span>Xonalar ({(employee.assignedRooms || []).length})</span></button> : `${(employee.assignedRooms || []).length} ta`}
-      </td>
+      </td>}
       <td data-label="Amal">
         {canManage ? <div className="table-action-wrap">
           <button className="hotel-icon-btn" onClick={() => onEdit(employee)} aria-label="Tahrirlash" title="Tahrirlash">
@@ -111,10 +101,12 @@ const EmployeeRow = memo(function EmployeeRow({ employee, isDeleting, canManage,
   )
 })
 
-export function EmployeesPage({ currentEmployee }) {
+export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
   const [form] = Form.useForm()
-  const { data, isLoading, error: listError } = useGetEmployeesQuery()
-  const { data: roomsData, isLoading: areRoomsLoading } = useGetRoomsQuery()
+  const isShop = businessUnit === 'shop'
+  const { data, isLoading, error: listError } = useGetEmployeesQuery({ businessUnit })
+  const { data: settingsData } = useGetGeneralSettingsQuery()
+  const { data: roomsData, isLoading: areRoomsLoading } = useGetRoomsQuery(undefined, { skip: isShop })
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation()
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation()
   const [assignEmployeeRooms, { isLoading: isAssigningRooms }] = useAssignEmployeeRoomsMutation()
@@ -129,7 +121,7 @@ export function EmployeesPage({ currentEmployee }) {
   const [roomEmployee, setRoomEmployee] = useState(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState([])
   const canLogin = Form.useWatch('canLogin', form)
-  const useTimePenalty = Form.useWatch(['workSchedule', 'useTimePenalty'], form)
+  const schedule = settingsData?.settings?.employeeWorkSchedule
   const employees = useMemo(() => data?.employees || [], [data?.employees])
   const rooms = useMemo(() => roomsData?.rooms || [], [roomsData?.rooms])
   const roomBlocks = useMemo(() => [...new Set(rooms.map((room) => room.block).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [rooms])
@@ -177,26 +169,16 @@ export function EmployeesPage({ currentEmployee }) {
       salary: Number(employee.salary || 0),
       payrollStartMonth: dayjs(employee.payrollStartMonth || undefined),
       payrollOpeningBalance: Number(employee.payrollOpeningBalance || 0),
-      canLogin: Boolean(employee.canLogin),
+      canLogin: isShop ? false : Boolean(employee.canLogin),
       role: employee.role === 'admin' ? 'owner' : employee.role || 'employee',
       login: employee.login || '',
       password: '',
       sections: employee.sections || [],
       assignedRooms: (employee.assignedRooms || []).map((room) => room.id),
       faceAccessEnabled: employee.faceAccessEnabled !== false,
-      workSchedule: {
-        checkInTime: employee.workSchedule?.checkInTime || '09:00',
-        checkOutTime: employee.workSchedule?.checkOutTime || '18:00',
-        workDays: employee.workSchedule?.workDays || [1, 2, 3, 4, 5, 6],
-        lateAfterMinutes: Number(employee.workSchedule?.lateAfterMinutes || 0),
-        earlyLeaveMinutes: Number(employee.workSchedule?.earlyLeaveMinutes || 0),
-        useTimePenalty: Boolean(employee.workSchedule?.useTimePenalty),
-        penaltyPerMinute: Number(employee.workSchedule?.penaltyPerMinute || 0),
-        penaltyStartDate: employee.workSchedule?.penaltyStartDate || dayjs().format('YYYY-MM-DD'),
-      },
     })
     setIsModalOpen(true)
-  }, [form])
+  }, [form, isShop])
 
   const openRoomsModal = useCallback((employee) => {
     setRoomEmployee(employee)
@@ -238,21 +220,12 @@ export function EmployeesPage({ currentEmployee }) {
       salary: Number(values.salary),
       payrollStartMonth: values.payrollStartMonth.format('YYYY-MM'),
       payrollOpeningBalance: Number(values.payrollOpeningBalance || 0),
-      canLogin: Boolean(values.canLogin),
-      sections: values.sections || [],
+      businessUnit,
+      canLogin: isShop ? false : Boolean(values.canLogin),
+      sections: isShop ? [] : values.sections || [],
       role: values.role || 'employee',
-      assignedRooms: values.assignedRooms || [],
+      assignedRooms: isShop ? [] : values.assignedRooms || [],
       faceAccessEnabled: values.faceAccessEnabled !== false,
-      workSchedule: {
-        checkInTime: values.workSchedule?.checkInTime,
-        checkOutTime: values.workSchedule?.checkOutTime,
-        workDays: values.workSchedule?.workDays || [],
-        lateAfterMinutes: Number(values.workSchedule?.lateAfterMinutes || 0),
-        earlyLeaveMinutes: Number(values.workSchedule?.earlyLeaveMinutes || 0),
-        useTimePenalty: Boolean(values.workSchedule?.useTimePenalty),
-        penaltyPerMinute: Number(values.workSchedule?.penaltyPerMinute || 0),
-        penaltyStartDate: values.workSchedule?.penaltyStartDate,
-      },
     }
     if (payload.canLogin) {
       payload.login = String(values.login || '').trim()
@@ -273,26 +246,26 @@ export function EmployeesPage({ currentEmployee }) {
       setError(message)
       toast.error(message)
     }
-  }, [closeModal, createEmployee, editingId, updateEmployee])
+  }, [businessUnit, closeModal, createEmployee, editingId, isShop, updateEmployee])
 
   const onDelete = useCallback(async (id) => {
     try {
-      await deleteEmployee(id).unwrap()
+      await deleteEmployee({ id, businessUnit }).unwrap()
       toast.success('Xodim o‘chirildi')
     } catch (requestError) {
       const message = apiErrorMessage(requestError)
       setError(message)
       toast.error(message)
     }
-  }, [deleteEmployee])
+  }, [businessUnit, deleteEmployee])
 
   return (
     <div className="hotel-employees-page">
       <div className="hotel-page-card">
         <div className="hotel-table-toolbar">
-          <h2>Xodimlar ro‘yxati</h2>
+          <h2>{isShop ? 'Do‘kon xodimlari ro‘yxati' : 'Xodimlar ro‘yxati'}</h2>
           <div className="hotel-toolbar-actions">
-            <input className="hotel-search-input" placeholder="Qidirish: ism, login, lavozim" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <input className="hotel-search-input" placeholder={isShop ? 'Qidirish: ism yoki lavozim' : 'Qidirish: ism, login, lavozim'} value={query} onChange={(event) => setQuery(event.target.value)} />
             {canManage && <button className="hotel-primary-btn" onClick={openCreateModal}>+ Yangi xodim</button>}
           </div>
         </div>
@@ -303,10 +276,10 @@ export function EmployeesPage({ currentEmployee }) {
         ) : (
           <div className="hotel-table-wrap">
             <table className="hotel-table">
-              <thead><tr><th>F.I.SH</th><th>Lavozim</th><th>Oylik</th><th>Rol</th><th>Login</th><th>Ruxsatlar</th><th>Xonalar</th><th>Amal</th></tr></thead>
+              <thead><tr><th>F.I.SH</th><th>Lavozim</th><th>Oylik</th>{!isShop && <><th>Rol</th><th>Login</th><th>Ruxsatlar</th><th>Xonalar</th></>}<th>Amal</th></tr></thead>
               <tbody>
-                {filteredEmployees.map((employee) => <EmployeeRow key={employee.id} employee={employee} isDeleting={isDeleting} canManage={canManage} onEdit={openEditModal} onManageRooms={openRoomsModal} onDelete={onDelete} />)}
-                {!filteredEmployees.length && <tr><td colSpan={8} className="hotel-table-empty">Hech narsa topilmadi</td></tr>}
+                {filteredEmployees.map((employee) => <EmployeeRow key={employee.id} employee={employee} schedule={schedule} isShop={isShop} isDeleting={isDeleting} canManage={canManage} onEdit={openEditModal} onManageRooms={openRoomsModal} onDelete={onDelete} />)}
+                {!filteredEmployees.length && <tr><td colSpan={isShop ? 4 : 8} className="hotel-table-empty">Hech narsa topilmadi</td></tr>}
               </tbody>
             </table>
           </div>
@@ -328,21 +301,12 @@ export function EmployeesPage({ currentEmployee }) {
             <Form.Item name="payrollOpeningBalance" label="Oldingi qoldiq (+ haqdor, − qarzdor)"><InputNumber precision={0} style={{ width: '100%' }} formatter={(value) => String(value ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} parser={(value) => String(value || '').replace(/[^\d-]/g, '')} /></Form.Item>
           </div>
           <section className="employee-schedule-section">
-            <h3>FaceID va ish grafigi</h3>
-            <Form.Item name="faceAccessEnabled" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>FaceID orqali eshik va davomat faol</Checkbox></Form.Item>
-            <div className="employee-form-grid">
-              <Form.Item name={['workSchedule', 'checkInTime']} label="Ish boshlanishi" rules={[{ pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="09:00" /></Form.Item>
-              <Form.Item name={['workSchedule', 'checkOutTime']} label="Ish tugashi" rules={[{ pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="18:00" /></Form.Item>
-              <Form.Item name={['workSchedule', 'lateAfterMinutes']} label="Kechikish imtiyozi (daq.)"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
-              <Form.Item name={['workSchedule', 'earlyLeaveMinutes']} label="Erta ketish imtiyozi (daq.)"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
-              <Form.Item name={['workSchedule', 'penaltyStartDate']} label="Jarima hisobi boshlanish sanasi" rules={[{ required: true, pattern: /^\d{4}-\d{2}-\d{2}$/, message: 'YYYY-MM-DD formatida kiriting' }]}><Input placeholder="2026-08-28" /></Form.Item>
-            </div>
-            <Form.Item name={['workSchedule', 'workDays']} label="Ish kunlari" rules={[{ required: true, message: 'Kamida bitta ish kunini tanlang' }]}><Checkbox.Group options={workDayOptions} /></Form.Item>
-            <Form.Item name={['workSchedule', 'useTimePenalty']} valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Har kechikkan/erta ketgan daqiqa uchun qat’iy jarima</Checkbox></Form.Item>
-            {useTimePenalty && <Form.Item name={['workSchedule', 'penaltyPerMinute']} label="1 daqiqa jarimasi" rules={[{ required: true, type: 'number', min: 0, message: 'Jarima summasini kiriting' }]}><InputNumber min={0} precision={0} addonAfter="so‘m" style={{ width: '100%' }} /></Form.Item>}
+            <h3>FaceID</h3>
+            <Form.Item name="faceAccessEnabled" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Bu xodim uchun FaceID davomati faol</Checkbox></Form.Item>
+            <p className="employee-global-schedule-note">Ish grafigi barcha xodimlar uchun Sozlamalar → Umumiy sozlamalar bo‘limida boshqariladi.</p>
           </section>
-          <Form.Item name="canLogin" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Dasturga kira oladi</Checkbox></Form.Item>
-          {canLogin && <>
+          {!isShop && <Form.Item name="canLogin" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Dasturga kira oladi</Checkbox></Form.Item>}
+          {!isShop && canLogin && <>
             <Form.Item name="role" label="Xodim roli" rules={[{ required: true }]}><Select options={[{ value: 'employee', label: 'Xodim' }, { value: 'manager', label: 'Menejer' }, { value: 'cashier', label: 'Kassir' }, { value: 'owner', label: 'Owner' }]} /></Form.Item>
             <div className="employee-form-grid">
               <Form.Item name="login" label="Login" rules={[{ required: true, whitespace: true, min: 3, message: 'Login kamida 3 ta belgi bo‘lsin' }]}><Input placeholder="Login kiriting" /></Form.Item>
@@ -355,7 +319,7 @@ export function EmployeesPage({ currentEmployee }) {
         </Form>
       </Modal>
 
-      <Modal open={Boolean(roomEmployee)} onCancel={closeRoomsModal} footer={null} width={760} rootClassName="hotel-employee-modal" title={`${roomEmployee?.firstname || ''} ${roomEmployee?.lastname || ''} — xonalarni biriktirish`}>
+      <Modal open={!isShop && Boolean(roomEmployee)} onCancel={closeRoomsModal} footer={null} width={760} rootClassName="hotel-employee-modal" title={`${roomEmployee?.firstname || ''} ${roomEmployee?.lastname || ''} — xonalarni biriktirish`}>
         <div className="employee-room-filters">
           <Input allowClear value={roomQuery} onChange={(event) => setRoomQuery(event.target.value)} placeholder="Xona raqamini qidiring" />
           <Select allowClear value={roomBlock} onChange={(value) => { setRoomBlock(value); setRoomFloor(undefined) }} placeholder="Barcha bloklar" options={roomBlocks.map((block) => ({ value: block, label: block }))} />

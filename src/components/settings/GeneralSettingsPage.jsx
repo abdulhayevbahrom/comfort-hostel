@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Button, Form, Input, Upload } from 'antd'
+import { Button, Checkbox, Form, Input, InputNumber, Upload } from 'antd'
 import { toast } from 'react-toastify'
 import { apiErrorMessage, useGetGeneralSettingsQuery, useUpdateGeneralSettingsMutation } from '../../store/baseApi'
 import './SettingsPages.css'
 
 const defaultDebtorSmsTemplate = "Hurmatli {studentName} sizda {period} uchun {debtAmount} so'm qarzdorlik mavjud. Qarzdorlikni to'lamasangiz binoga kirish taqiqlanadi. {hostelName}!"
+const workDayOptions = [{ label: 'Du', value: 1 }, { label: 'Se', value: 2 }, { label: 'Ch', value: 3 }, { label: 'Pa', value: 4 }, { label: 'Ju', value: 5 }, { label: 'Sh', value: 6 }, { label: 'Ya', value: 0 }]
 
 function smsPreview(template) {
   return String(template || defaultDebtorSmsTemplate)
@@ -24,17 +25,44 @@ export function GeneralSettingsPage() {
   const settings = data?.settings
   const receiptThankYou = Form.useWatch('receiptThankYou', form)
   const debtorSmsTemplate = Form.useWatch('debtorSmsTemplate', form)
+  const useTimePenalty = Form.useWatch(['employeeWorkSchedule', 'useTimePenalty'], form)
 
   useEffect(() => {
     if (!settings) return
-    form.setFieldsValue({ hostelName: settings.hostelName, organizationPhone: settings.organizationPhone, organizationAddress: settings.organizationAddress, receiptThankYou: settings.receiptThankYou, debtorSmsTemplate: settings.debtorSmsTemplate || defaultDebtorSmsTemplate })
+    form.setFieldsValue({
+      hostelName: settings.hostelName,
+      organizationPhone: settings.organizationPhone,
+      organizationAddress: settings.organizationAddress,
+      receiptThankYou: settings.receiptThankYou,
+      debtorSmsTemplate: settings.debtorSmsTemplate || defaultDebtorSmsTemplate,
+      employeeFaceAttendanceEnabled: settings.employeeFaceAttendanceEnabled !== false,
+      employeeWorkSchedule: {
+        checkInTime: settings.employeeWorkSchedule?.checkInTime || '09:00',
+        checkOutTime: settings.employeeWorkSchedule?.checkOutTime || '18:00',
+        workDays: settings.employeeWorkSchedule?.workDays || [1, 2, 3, 4, 5, 6],
+        lateAfterMinutes: Number(settings.employeeWorkSchedule?.lateAfterMinutes || 0),
+        earlyLeaveMinutes: Number(settings.employeeWorkSchedule?.earlyLeaveMinutes || 0),
+        useTimePenalty: Boolean(settings.employeeWorkSchedule?.useTimePenalty),
+        penaltyPerMinute: Number(settings.employeeWorkSchedule?.penaltyPerMinute || 0),
+        penaltyStartDate: settings.employeeWorkSchedule?.penaltyStartDate || new Date().toISOString().slice(0, 10),
+      },
+    })
   }, [form, settings])
 
   const submit = async (values) => {
     try {
       setError('')
       const body = new FormData()
-      body.append('payload', JSON.stringify({ hostelName: values.hostelName.trim(), organizationPhone: values.organizationPhone.trim(), organizationAddress: values.organizationAddress.trim(), receiptThankYou: values.receiptThankYou.trim(), debtorSmsTemplate: values.debtorSmsTemplate.trim(), removeLogo }))
+      body.append('payload', JSON.stringify({
+        hostelName: values.hostelName.trim(),
+        organizationPhone: values.organizationPhone.trim(),
+        organizationAddress: values.organizationAddress.trim(),
+        receiptThankYou: values.receiptThankYou.trim(),
+        debtorSmsTemplate: values.debtorSmsTemplate.trim(),
+        employeeFaceAttendanceEnabled: values.employeeFaceAttendanceEnabled !== false,
+        employeeWorkSchedule: values.employeeWorkSchedule,
+        removeLogo,
+      }))
       if (logoFiles[0]?.originFileObj) body.append('logo', logoFiles[0].originFileObj)
       await updateSettings(body).unwrap()
       setLogoFiles([])
@@ -64,6 +92,21 @@ export function GeneralSettingsPage() {
             <Form.Item name="debtorSmsTemplate" label="Qarzdorlik uchun SMS matni" rules={[{ required: true, whitespace: true, message: 'SMS matnini kiriting' }]}><Input.TextArea rows={5} maxLength={500} showCount placeholder={defaultDebtorSmsTemplate} /></Form.Item>
             <div className="receipt-preview"><span>Talabaga shunday yuboriladi</span><p>{smsPreview(debtorSmsTemplate)}</p></div>
             <div className="room-image-help">Faqat kerak bo‘lsa, matndagi {'{studentName}'}, {'{debtAmount}'} va {'{period}'} qismlarini o‘zgartirmang — ular avtomatik to‘ldiriladi.</div>
+            <section className="general-employee-schedule">
+              <div className="general-setting-section-title"><h3>Xodimlar FaceID va ish grafigi</h3><p>Bu grafik barcha faol xodimlar uchun bir xil ishlaydi.</p></div>
+              <Form.Item name="employeeFaceAttendanceEnabled" valuePropName="checked"><Checkbox>FaceID orqali xodim kirish-chiqishi va davomati faol</Checkbox></Form.Item>
+              <div className="general-setting-grid">
+                <Form.Item name={['employeeWorkSchedule', 'checkInTime']} label="Ish boshlanishi" rules={[{ required: true }, { pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="09:00" /></Form.Item>
+                <Form.Item name={['employeeWorkSchedule', 'checkOutTime']} label="Ish tugashi" rules={[{ required: true }, { pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="18:00" /></Form.Item>
+                <Form.Item name={['employeeWorkSchedule', 'lateAfterMinutes']} label="Kech qolishga ruxsat (daq.)"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name={['employeeWorkSchedule', 'earlyLeaveMinutes']} label="Erta ketishga ruxsat (daq.)"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name={['employeeWorkSchedule', 'penaltyStartDate']} label="Jarima hisobi boshlanish sanasi" rules={[{ required: true, pattern: /^\d{4}-\d{2}-\d{2}$/, message: 'YYYY-MM-DD formatida kiriting' }]}><Input placeholder="2026-08-31" /></Form.Item>
+              </div>
+              <Form.Item name={['employeeWorkSchedule', 'workDays']} label="Ish kunlari" rules={[{ required: true, message: 'Kamida bitta ish kunini tanlang' }]}><Checkbox.Group options={workDayOptions} /></Form.Item>
+              <Form.Item name={['employeeWorkSchedule', 'useTimePenalty']} valuePropName="checked"><Checkbox>Har kechikkan/erta ketgan daqiqa uchun qat’iy jarima</Checkbox></Form.Item>
+              {useTimePenalty && <Form.Item name={['employeeWorkSchedule', 'penaltyPerMinute']} label="1 daqiqa jarimasi" rules={[{ required: true, type: 'number', min: 0, message: 'Jarima summasini kiriting' }]}><InputNumber min={0} precision={0} addonAfter="so‘m" style={{ width: '100%' }} /></Form.Item>}
+              <div className="schedule-mode-note">Chiqish qurilmasi yo‘q paytda tizim xodimni belgilangan ish tugash vaqtida avtomatik chiqqan deb hisoblaydi. OUT qurilma qo‘shilgach, haqiqiy FaceID chiqish vaqti olinadi.</div>
+            </section>
             <div className="directory-form-actions"><Button htmlType="submit" loading={saving} className="directory-submit-btn">Sozlamalarni saqlash</Button></div>
           </Form>
         )}

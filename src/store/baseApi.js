@@ -646,10 +646,6 @@ export const baseApi = createApi({
       transformResponse: (response) => response.data,
       invalidatesTags: [{ type: 'FaceDevice', id: 'LIST' }],
     }),
-    testFaceDeviceDoor: builder.mutation({
-      query: (id) => ({ url: `/faceid/devices/${id}/test-door`, method: 'POST' }),
-      transformResponse: (response) => response.data,
-    }),
   }),
 })
 
@@ -740,7 +736,6 @@ export const {
   useGetFaceDevicesQuery,
   useCreateFaceDeviceMutation,
   useUpdateFaceDeviceMutation,
-  useTestFaceDeviceDoorMutation,
 } = baseApi
 
 export function apiErrorMessage(error) {

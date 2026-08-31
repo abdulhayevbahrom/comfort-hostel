@@ -21,6 +21,7 @@ import { StudentPhotoField } from "./StudentPhotoField";
 
 const initialValues = {
   fullName: "",
+  faceIdCode: "",
   phone: "",
   gender: "female",
   parentPhone: "",
@@ -225,6 +226,15 @@ export function StudentFormModal({
             ]}
           >
             <Input maxLength={9} inputMode="numeric" placeholder="939119572" />
+          </Form.Item>
+          <Form.Item
+            name="faceIdCode"
+            label="FaceID kodi"
+            extra="Hikvision qurilmasidagi Employee ID bilan bir xil bo‘lsin. Faqat harf va raqam, 1–32 belgi."
+            rules={[{ pattern: /^[A-Za-z0-9]{1,32}$/, message: "Faqat 1–32 ta harf va raqam kiriting" }]}
+            normalize={(value) => String(value || "").toUpperCase()}
+          >
+            <Input maxLength={32} placeholder="Masalan: STU001" />
           </Form.Item>
           <Form.Item
             name="gender"

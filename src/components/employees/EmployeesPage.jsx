@@ -28,6 +28,7 @@ const initialForm = {
   password: '',
   sections: [],
   assignedRooms: [],
+  faceIdCode: '',
   faceAccessEnabled: true,
 }
 
@@ -175,6 +176,7 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
       password: '',
       sections: employee.sections || [],
       assignedRooms: (employee.assignedRooms || []).map((room) => room.id),
+      faceIdCode: employee.faceIdCode || '',
       faceAccessEnabled: employee.faceAccessEnabled !== false,
     })
     setIsModalOpen(true)
@@ -225,6 +227,7 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
       sections: isShop ? [] : values.sections || [],
       role: values.role || 'employee',
       assignedRooms: isShop ? [] : values.assignedRooms || [],
+      faceIdCode: String(values.faceIdCode || '').trim().toUpperCase(),
       faceAccessEnabled: values.faceAccessEnabled !== false,
     }
     if (payload.canLogin) {
@@ -302,6 +305,15 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
           </div>
           <section className="employee-schedule-section">
             <h3>FaceID</h3>
+            <Form.Item
+              name="faceIdCode"
+              label="FaceID kodi"
+              extra="Hikvision qurilmasidagi Employee ID bilan bir xil bo‘lsin. Faqat harf va raqam, 1–32 belgi."
+              rules={[{ pattern: /^[A-Za-z0-9]{1,32}$/, message: 'Faqat 1–32 ta harf va raqam kiriting' }]}
+              normalize={(value) => String(value || '').toUpperCase()}
+            >
+              <Input maxLength={32} placeholder="Masalan: EMP001" />
+            </Form.Item>
             <Form.Item name="faceAccessEnabled" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Bu xodim uchun FaceID davomati faol</Checkbox></Form.Item>
             <p className="employee-global-schedule-note">Ish grafigi barcha xodimlar uchun Sozlamalar → Umumiy sozlamalar bo‘limida boshqariladi.</p>
           </section>

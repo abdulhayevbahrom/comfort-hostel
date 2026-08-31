@@ -27,6 +27,7 @@ const initialValues = {
   parentPhone: "",
   depositType: "none",
   depositAmount: null,
+  depositPaymentMethod: undefined,
   depositReceivedAt: null,
   university: undefined,
   faculty: undefined,
@@ -107,7 +108,10 @@ export function StudentFormModal({
             zaks: `${student.zaksSeries || ""}${student.zaksNumber || ""}`,
             depositType: student.depositType || "none",
             depositAmount: student.depositAmount || null,
-            depositReceivedAt: student.depositReceivedAt ? dayjs(student.depositReceivedAt) : null,
+            depositPaymentMethod: student.depositPaymentMethod || undefined,
+            depositReceivedAt: student.depositReceivedAt
+              ? dayjs(student.depositReceivedAt)
+              : null,
           }
         : initialValues,
     );
@@ -161,8 +165,17 @@ export function StudentFormModal({
           const studentValues = { ...values };
           delete studentValues.passport;
           delete studentValues.zaks;
-          if (values.gender === "family" && !marriageCertificateFiles.length && !student?.marriageCertificate) {
-            form.setFields([{ name: "marriageCertificate", errors: ["ZAKS qog‘ozi rasmini yuklang"] }]);
+          if (
+            values.gender === "family" &&
+            !marriageCertificateFiles.length &&
+            !student?.marriageCertificate
+          ) {
+            form.setFields([
+              {
+                name: "marriageCertificate",
+                errors: ["ZAKS qog‘ozi rasmini yuklang"],
+              },
+            ]);
             submittingRef.current = false;
             setSubmitting(false);
             return;
@@ -197,10 +210,19 @@ export function StudentFormModal({
             !form.getFieldValue("taxContractType")
           )
             form.setFieldValue("taxContractType", "student_contract");
-          if (["money", "passport"].includes(changed.depositType) && !form.getFieldValue("depositReceivedAt"))
+          if (
+            ["money", "passport"].includes(changed.depositType) &&
+            !form.getFieldValue("depositReceivedAt")
+          )
             form.setFieldValue("depositReceivedAt", dayjs());
           if (changed.depositType === "none")
-            form.setFieldsValue({ depositAmount: null, depositReceivedAt: null });
+            form.setFieldsValue({
+              depositAmount: null,
+              depositPaymentMethod: undefined,
+              depositReceivedAt: null,
+            });
+          if (changed.depositType === "passport")
+            form.setFieldValue("depositPaymentMethod", undefined);
         }}
       >
         <div className="student-form-grid">
@@ -231,7 +253,12 @@ export function StudentFormModal({
             name="faceIdCode"
             label="FaceID kodi"
             extra="Hikvision qurilmasidagi Employee ID bilan bir xil bo‘lsin. Faqat harf va raqam, 1–32 belgi."
-            rules={[{ pattern: /^[A-Za-z0-9]{1,32}$/, message: "Faqat 1–32 ta harf va raqam kiriting" }]}
+            rules={[
+              {
+                pattern: /^[A-Za-z0-9]{1,32}$/,
+                message: "Faqat 1–32 ta harf va raqam kiriting",
+              },
+            ]}
             normalize={(value) => String(value || "").toUpperCase()}
           >
             <Input maxLength={32} placeholder="Masalan: STU001" />
@@ -252,11 +279,33 @@ export function StudentFormModal({
               ]}
             />
           </Form.Item>
-          {gender === "family" && <>
-            <Form.Item name="zaks" label="ZAKS seriyasi va raqami" rules={[{ required: true, message: "ZAKS seriyasi va raqamini kiriting" }, { pattern: /^[A-Za-z]{2}\s?\d{7}$/, message: "Masalan: AA1234567" }]}>
-              <Input maxLength={10} placeholder="AA1234567" onInput={(event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); }} />
-            </Form.Item>
-          </>}
+          {gender === "family" && (
+            <>
+              <Form.Item
+                name="zaks"
+                label="ZAKS seriyasi va raqami"
+                rules={[
+                  {
+                    required: true,
+                    message: "ZAKS seriyasi va raqamini kiriting",
+                  },
+                  {
+                    pattern: /^[A-Za-z]{2}\s?\d{7}$/,
+                    message: "Masalan: AA1234567",
+                  },
+                ]}
+              >
+                <Input
+                  maxLength={10}
+                  placeholder="AA1234567"
+                  onInput={(event) => {
+                    event.currentTarget.value =
+                      event.currentTarget.value.toUpperCase();
+                  }}
+                />
+              </Form.Item>
+            </>
+          )}
           <Form.Item
             name="parentPhone"
             label="Ota-onasi telefoni"
@@ -265,14 +314,78 @@ export function StudentFormModal({
             <Input maxLength={9} inputMode="numeric" placeholder="939119572" />
           </Form.Item>
           <Form.Item name="depositType" label="Depozit turi">
-            <Segmented className="student-deposit-segmented" block options={[{ value: "none", label: "Yo‘q" }, { value: "money", label: "Pul" }, { value: "passport", label: "Pasport" }]} />
+            <Segmented
+              className="student-deposit-segmented"
+              block
+              options={[
+                { value: "none", label: "Yo‘q" },
+                { value: "money", label: "Pul" },
+                { value: "passport", label: "Pasport" },
+              ]}
+            />
           </Form.Item>
-          {depositType === "money" && <Form.Item className="student-deposit-details" label="Depozit ma’lumotlari"><div className="student-deposit-fields"><Form.Item name="depositAmount" noStyle rules={[{ required: true, message: "Summani kiriting" }]}><InputNumber min={1} precision={0} placeholder="Depozit summasi" formatter={(value) => String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} parser={(value) => String(value || '').replace(/\D/g, '')} /></Form.Item><Form.Item name="depositReceivedAt" noStyle rules={[{ required: true, message: "Sanani tanlang" }]}><DatePicker format="DD.MM.YYYY" placeholder="Depozit olingan sana" /></Form.Item></div></Form.Item>}
-          {depositType === "passport" && <Form.Item name="depositReceivedAt" label="Depozit olingan sana" rules={[{ required: true, message: "Sanani tanlang" }]}><DatePicker format="DD.MM.YYYY" style={{ width: "100%" }} /></Form.Item>}
-          <Form.Item
-            name="university"
-            label="Universitet (ixtiyoriy)"
-          >
+          {depositType === "money" && (
+            <Form.Item
+              className="student-deposit-details"
+              label="Depozit ma’lumotlari"
+            >
+              <div className="student-deposit-fields">
+                <Form.Item
+                  name="depositAmount"
+                  noStyle
+                  rules={[{ required: true, message: "Summani kiriting" }]}
+                >
+                  <InputNumber
+                    min={1}
+                    precision={0}
+                    placeholder="Depozit summasi"
+                    formatter={(value) =>
+                      String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+                    }
+                    parser={(value) => String(value || "").replace(/\D/g, "")}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="depositReceivedAt"
+                  noStyle
+                  rules={[{ required: true, message: "Sanani tanlang" }]}
+                >
+                  <DatePicker
+                    format="DD.MM.YYYY"
+                    placeholder="Depozit olingan sana"
+                  />
+                </Form.Item>
+              </div>
+            </Form.Item>
+          )}
+          {depositType === "money" && (
+            <Form.Item
+              name="depositPaymentMethod"
+              label="Depozit to‘lov turi"
+              rules={[{ required: true, message: "To‘lov turini tanlang" }]}
+            >
+              <Segmented
+                className="student-deposit-segmented"
+                block
+                options={[
+                  { value: "cash", label: "Naqd" },
+                  { value: "online", label: "Click" },
+                  { value: "card", label: "Terminal" },
+                  { value: "bank", label: "Bank" },
+                ]}
+              />
+            </Form.Item>
+          )}
+          {depositType === "passport" && (
+            <Form.Item
+              name="depositReceivedAt"
+              label="Depozit olingan sana"
+              rules={[{ required: true, message: "Sanani tanlang" }]}
+            >
+              <DatePicker format="DD.MM.YYYY" style={{ width: "100%" }} />
+            </Form.Item>
+          )}
+          <Form.Item name="university" label="Universitet (ixtiyoriy)">
             <AutoComplete
               allowClear
               filterOption={(input, option) =>
@@ -290,10 +403,7 @@ export function StudentFormModal({
               }))}
             />
           </Form.Item>
-          <Form.Item
-            name="faculty"
-            label="Fakultet (ixtiyoriy)"
-          >
+          <Form.Item name="faculty" label="Fakultet (ixtiyoriy)">
             <AutoComplete
               allowClear
               disabled={!universityId}
@@ -348,8 +458,14 @@ export function StudentFormModal({
           <div className="student-inline-dependent-field">
             <label>Vaqtinchalik propiska</label>
             <div>
-              <Form.Item name="hasTemporaryRegistration" valuePropName="checked" noStyle>
-                <Checkbox className="student-tax-contract-checkbox">Propiska qilingan</Checkbox>
+              <Form.Item
+                name="hasTemporaryRegistration"
+                valuePropName="checked"
+                noStyle
+              >
+                <Checkbox className="student-tax-contract-checkbox">
+                  Propiska qilingan
+                </Checkbox>
               </Form.Item>
               {hasTemporaryRegistration && (
                 <Form.Item
@@ -357,10 +473,21 @@ export function StudentFormModal({
                   className="student-inline-months"
                   rules={[
                     { required: true, message: "Muddatni kiriting" },
-                    { type: "number", min: 1, max: 12, message: "1 dan 12 oygacha kiriting" },
+                    {
+                      type: "number",
+                      min: 1,
+                      max: 12,
+                      message: "1 dan 12 oygacha kiriting",
+                    },
                   ]}
                 >
-                  <InputNumber min={1} max={12} precision={0} addonAfter="oy" placeholder="1–12" />
+                  <InputNumber
+                    min={1}
+                    max={12}
+                    precision={0}
+                    addonAfter="oy"
+                    placeholder="1–12"
+                  />
                 </Form.Item>
               )}
             </div>
@@ -404,13 +531,17 @@ export function StudentFormModal({
             <label>Soliq tizimidagi shartnoma</label>
             <div>
               <Form.Item name="hasTaxContract" valuePropName="checked" noStyle>
-                <Checkbox className="student-tax-contract-checkbox">Soliq orqali</Checkbox>
+                <Checkbox className="student-tax-contract-checkbox">
+                  Soliq orqali
+                </Checkbox>
               </Form.Item>
               {hasTaxContract && (
                 <Form.Item
                   name="taxContractType"
                   className="student-inline-tax-type"
-                  rules={[{ required: true, message: "Shartnoma turini tanlang" }]}
+                  rules={[
+                    { required: true, message: "Shartnoma turini tanlang" },
+                  ]}
                 >
                   <Segmented
                     className="student-state-segmented"
@@ -528,9 +659,26 @@ export function StudentFormModal({
             onRemoveCurrent={() => setRemovePhoto(true)}
           />
         </Form.Item>
-        {gender === "family" && <Form.Item name="marriageCertificate" label="ZAKS qog‘ozi rasmi" required>
-          <StudentPhotoField currentPhoto={student?.marriageCertificate} fileList={marriageCertificateFiles} removed={false} uploadLabel="Rasm yuklash" description="Hujjat to‘liq va aniq ko‘rinsin · JPG, PNG yoki WEBP · maksimal 5 MB" onChange={(files) => { setMarriageCertificateFiles(files); form.setFields([{ name: "marriageCertificate", errors: [] }]); }} onRemoveCurrent={() => {}} />
-        </Form.Item>}
+        {gender === "family" && (
+          <Form.Item
+            name="marriageCertificate"
+            label="ZAKS qog‘ozi rasmi"
+            required
+          >
+            <StudentPhotoField
+              currentPhoto={student?.marriageCertificate}
+              fileList={marriageCertificateFiles}
+              removed={false}
+              uploadLabel="Rasm yuklash"
+              description="Hujjat to‘liq va aniq ko‘rinsin · JPG, PNG yoki WEBP · maksimal 5 MB"
+              onChange={(files) => {
+                setMarriageCertificateFiles(files);
+                form.setFields([{ name: "marriageCertificate", errors: [] }]);
+              }}
+              onRemoveCurrent={() => {}}
+            />
+          </Form.Item>
+        )}
         {error && <div className="form-error">{error}</div>}
         <div className="student-form-actions">
           <Button

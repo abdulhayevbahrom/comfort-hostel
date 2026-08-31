@@ -12,7 +12,6 @@ import './AttendanceTabsCompact.css'
 const statuses = {
   present: { label: 'Keldi', icon: '✓' },
   absent: { label: 'Kelmadi', icon: '×' },
-  late: { label: 'Kech qoldi', icon: '◷' },
 }
 
 function AttendanceMarkingTab() {
@@ -31,7 +30,7 @@ function AttendanceMarkingTab() {
 
   useEffect(() => {
     const next = {}
-    for (const row of data?.rows || []) next[row.student.id] = { status: row.attendance?.status || '', note: row.attendance?.note || '', dirty: false }
+    for (const row of data?.rows || []) next[row.student.id] = { status: row.attendance?.status === 'late' ? 'present' : row.attendance?.status || '', note: row.attendance?.note || '', dirty: false }
     // Serverdagi sana/filtr natijasi o‘zgarganda tahrir buferi aynan shu ro‘yxatga tegishli bo‘lishi kerak.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDrafts(next)
@@ -56,7 +55,7 @@ function AttendanceMarkingTab() {
   const summary = data?.summary || {}
   return <div className="attendance-page">
     <section className="attendance-hero">
-      <div><span>KUNLIK NAZORAT</span><h2>Talabalar davomati</h2><p>Xodim talabalar kelganini, kelmaganini yoki kech qolganini belgilaydi.</p></div>
+      <div><span>KUNLIK NAZORAT</span><h2>Talabalar davomati</h2><p>Talabalarning kelgan-kelmagan holati hamda kirish-chiqish vaqtlari.</p></div>
       <DatePicker allowClear={false} value={dayjs(date)} disabledDate={(current) => current && current.isAfter(dayjs(), 'day')} format="DD MMMM, YYYY" onChange={(value) => { setDate(value.format('YYYY-MM-DD')); setPage(1) }} />
     </section>
 
@@ -64,7 +63,6 @@ function AttendanceMarkingTab() {
       <button className={status === 'all' ? 'active total' : 'total'} onClick={() => { setStatus('all'); setPage(1) }}><span>Jami talabalar</span><strong>{summary.total || 0}</strong><small>faol yashovchi</small></button>
       <button className={status === 'present' ? 'active present' : 'present'} onClick={() => { setStatus('present'); setPage(1) }}><span>Keldi</span><strong>{summary.present || 0}</strong><small>{summary.total ? Math.round((summary.present || 0) / summary.total * 100) : 0}%</small></button>
       <button className={status === 'absent' ? 'active absent' : 'absent'} onClick={() => { setStatus('absent'); setPage(1) }}><span>Kelmadi</span><strong>{summary.absent || 0}</strong><small>nazorat talab</small></button>
-      <button className={status === 'late' ? 'active late' : 'late'} onClick={() => { setStatus('late'); setPage(1) }}><span>Kech qoldi</span><strong>{summary.late || 0}</strong><small>kechikkan</small></button>
       <button className={status === 'unmarked' ? 'active unmarked' : 'unmarked'} onClick={() => { setStatus('unmarked'); setPage(1) }}><span>Belgilanmagan</span><strong>{summary.unmarked || 0}</strong><small>qolgan</small></button>
     </section>
 
@@ -84,15 +82,17 @@ function AttendanceMarkingTab() {
       </div>
       {error && <div className="form-error">{apiErrorMessage(error)}</div>}
       {isLoading ? <div className="attendance-state">Davomat yuklanmoqda…</div> : <div className={`attendance-table-wrap ${isFetching ? 'refreshing' : ''}`}><table className="attendance-table">
-        <thead><tr><th>Talaba</th><th>Xona</th><th>Universitet</th><th>Davomat holati</th><th>Belgilagan xodim</th><th>Izoh</th></tr></thead>
+        <thead><tr><th>Talaba</th><th>Xona</th><th>Universitet</th><th>Davomat holati</th><th>Kirish</th><th>Chiqish</th><th>Belgilagan xodim</th><th>Izoh</th></tr></thead>
         <tbody>{(data?.rows || []).map((row) => { const draft = drafts[row.student.id] || {}; return <tr key={row.student.id} className={draft.dirty ? 'changed' : ''}>
           <td data-label="Talaba"><div className="attendance-student">{row.student.photo ? <img src={row.student.photo.thumbnailUrl || row.student.photo.url} alt="" /> : <span>{row.student.fullName?.[0]}</span>}<div><strong>{row.student.fullName}</strong><small>{row.student.phone}</small></div></div></td>
           <td data-label="Xona"><strong>{row.room.block} · {row.room.roomNumber}-xona</strong><small>{row.room.floor}-qavat</small></td>
           <td data-label="Universitet"><strong>{row.student.university?.shortName || row.student.university?.name || '—'}</strong><small>{row.student.course}-kurs · {row.student.faculty?.name || '—'}</small></td>
           <td data-label="Holat"><div className="attendance-statuses">{Object.entries(statuses).map(([value, item]) => <button key={value} title={item.label} className={`${value} ${draft.status === value ? 'active' : ''} ${draft.status && draft.status !== value ? 'muted' : ''}`} onClick={() => updateDraft(row.student.id, { status: value })}><b>{item.icon}</b><span>{item.label}</span></button>)}</div></td>
+          <td data-label="Kirish"><strong>{row.entryAt || row.attendance?.firstEntry ? dayjs(row.entryAt || row.attendance.firstEntry).format('HH:mm') : '—'}</strong></td>
+          <td data-label="Chiqish"><strong>{row.exitAt ? dayjs(row.exitAt).format('HH:mm') : '—'}</strong></td>
           <td data-label="Xodim">{row.attendance?.source === 'faceid' ? <><strong>FaceID qurilma</strong><small>{dayjs(row.attendance.firstEntry || row.attendance.markedAt).format('HH:mm')} da qayd etildi</small></> : row.attendance?.markedBy ? <><strong>{`${row.attendance.markedBy.firstname || ''} ${row.attendance.markedBy.lastname || ''}`.trim() || 'Noma’lum xodim'}</strong><small>{row.attendance.markedBy.position ? `${row.attendance.markedBy.position} · ` : ''}{dayjs(row.attendance.markedAt).format('HH:mm')}</small></> : <span className="not-marked">Hali belgilanmagan</span>}</td>
           <td data-label="Izoh"><button className={draft.note ? 'note-button has-note' : 'note-button'} onClick={() => setNoteStudent(row.student)}>{draft.note ? 'Izohni ko‘rish' : '+ Izoh'}</button></td>
-        </tr>})}{!data?.rows?.length && <tr><td colSpan="6" className="attendance-state">Tanlangan filtr bo‘yicha talaba topilmadi</td></tr>}</tbody>
+        </tr>})}{!data?.rows?.length && <tr><td colSpan="8" className="attendance-state">Tanlangan filtr bo‘yicha talaba topilmadi</td></tr>}</tbody>
       </table></div>}
       {(data?.pagination?.total || 0) > 25 && <div className="attendance-pagination"><span>Jami {data.pagination.total} ta natija</span><Pagination current={data.pagination.page} pageSize={25} total={data.pagination.total} showSizeChanger={false} onChange={setPage} /></div>}
       <div className="attendance-footer"><div><strong>{changedCount}</strong> ta o‘zgarish saqlashga tayyor</div><button disabled={!changedCount || isSaving} onClick={save}>{isSaving ? 'Saqlanmoqda…' : 'Davomatni saqlash'}</button></div>

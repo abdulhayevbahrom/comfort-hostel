@@ -223,7 +223,7 @@ export function StudentProfilePage({ currentEmployee }) {
                     <h3>Depozit</h3>
                     <div className="student-profile-grid">
                       <ProfileItem label="Depozit turi" value={student.depositType === "money" ? "Pul" : student.depositType === "passport" ? "Pasport" : "Depozit qo‘yilmagan"} />
-                      {student.depositType === "money" && <ProfileItem label="Depozit summasi" value={money(student.depositAmount)} />}
+                      {student.depositType === "money" && <><ProfileItem label="Depozit summasi" value={money(student.depositAmount)} /><ProfileItem label="To‘lov turi" value={{ cash: "Naqd", online: "Click", card: "Terminal", bank: "Bank" }[student.depositPaymentMethod] || "—"} /></>}
                       {student.depositType !== "none" && <ProfileItem label="Depozit olingan sana" value={student.depositReceivedAt ? new Date(student.depositReceivedAt).toLocaleDateString("uz-UZ") : "—"} />}
                       {student.depositReturnedAt && <ProfileItem label="Depozit qaytarilgan sana" value={new Date(student.depositReturnedAt).toLocaleDateString("uz-UZ")} />}
                     </div>

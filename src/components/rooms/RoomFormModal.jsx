@@ -120,7 +120,20 @@ export function RoomFormModal({
       },
     ]);
   };
-  const updateSlotNumber = (bedIndex, slotIndex, number) =>
+  const updateSlotNumber = (bedIndex, slotIndex, number) => {
+    const slotNumber = Number(number);
+    const duplicate = bedLayout.some((bed, currentBedIndex) =>
+      (bed.slotNumbers || []).some(
+        (slot, currentSlotIndex) =>
+          currentBedIndex !== bedIndex || currentSlotIndex !== slotIndex
+            ? Number(slot) === slotNumber
+            : false,
+      ),
+    );
+    if (Number.isFinite(slotNumber) && duplicate) {
+      message.error(`O‘rin raqami ${slotNumber} avval kiritilgan`);
+      return;
+    }
     form.setFieldValue(
       "bedLayout",
       bedLayout.map((item, itemIndex) =>
@@ -134,6 +147,7 @@ export function RoomFormModal({
           : item,
       ),
     );
+  };
   const removeBed = (index) =>
     form.setFieldValue(
       "bedLayout",
@@ -163,6 +177,9 @@ export function RoomFormModal({
           const currentBedLayout = form.getFieldValue("bedLayout") || bedLayout;
           if (!currentBedLayout.length)
             return message.error("Kamida bitta krovat qo‘shing");
+          const slotNumbers = currentBedLayout.flatMap((bed) => bed.slotNumbers || []).map(Number);
+          if (new Set(slotNumbers).size !== slotNumbers.length)
+            return message.error("O‘rin raqamlari bir xil bo‘lmasligi kerak");
           onSubmit({
             values: { ...values, bedLayout: currentBedLayout },
             newImages,

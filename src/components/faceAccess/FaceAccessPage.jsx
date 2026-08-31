@@ -6,7 +6,6 @@ import {
   apiErrorMessage,
   API_URL,
   useCreateFaceDeviceMutation,
-  useGetFaceAccessEventsQuery,
   useGetFaceAccessStatesQuery,
   useGetFaceDevicesQuery,
   useGetStudentPresenceQuery,
@@ -17,16 +16,6 @@ import {
 import './FaceAccess.css'
 import './FaceAccessDevices.css'
 
-const decisions = {
-  granted: ['Davomat yozildi', 'granted'],
-  granted_warning: ['Davomat + qarz SMS', 'warning'],
-  observed_unknown: ['Biriktirilmagan FaceID', 'denied'],
-  denied_unknown: ['Eski noma’lum event', 'denied'],
-  denied_inactive: ['Eski faol shartnomasiz event', 'denied'],
-  denied_disabled: ['Eski o‘chirilgan event', 'denied'],
-  denied_debt_limit: ['Eski bloklangan event', 'blocked'],
-  error: ['Xatolik', 'denied'],
-}
 const money = (value) => `${Number(value || 0).toLocaleString('uz-UZ')} so‘m`
 const dateTime = (value) => value ? new Date(value).toLocaleString('uz-UZ') : '—'
 const dateOnly = (value) => value ? new Date(value).toLocaleDateString('uz-UZ') : '—'
@@ -41,12 +30,11 @@ const durationText = (minutes) => {
 
 export function FaceAccessPage({ currentEmployee }) {
   const [deviceForm] = Form.useForm()
-  const [decision, setDecision] = useState('')
+  const [activeTab, setActiveTab] = useState('presence')
   const [sessionMonth, setSessionMonth] = useState(dayjs().format('YYYY-MM'))
   const [deviceModal, setDeviceModal] = useState(false)
   const canManageDevices = ['owner', 'admin'].includes(currentEmployee?.role)
   const canReset = ['owner', 'admin'].includes(currentEmployee?.role)
-  const { data: eventData, isLoading: eventsLoading, error: eventError } = useGetFaceAccessEventsQuery({ limit: 150, ...(decision ? { decision } : {}) })
   const { data: stateData, isLoading: statesLoading, error: stateError } = useGetFaceAccessStatesQuery()
   const { data: presenceData, isLoading: presenceLoading, error: presenceError } = useGetStudentPresenceQuery()
   const { data: sessionData, isLoading: sessionsLoading, error: sessionsError } = useGetStudentStaySessionsQuery({ month: sessionMonth, limit: 300 })
@@ -54,7 +42,6 @@ export function FaceAccessPage({ currentEmployee }) {
   const [resetState, { isLoading: resetting }] = useResetFaceAccessStateMutation()
   const [createDevice, { isLoading: creatingDevice }] = useCreateFaceDeviceMutation()
   const [updateDevice, { isLoading: updatingDevice }] = useUpdateFaceDeviceMutation()
-  const events = eventData?.events || []
   const states = stateData?.states || []
   const presenceRows = presenceData?.rows || []
   const presenceSummary = presenceData?.summary || { total: 0, inside: 0, outside: 0, unknown: 0 }
@@ -93,11 +80,17 @@ export function FaceAccessPage({ currentEmployee }) {
         <article><span>Hali aniqlanmagan</span><strong>{presenceSummary.unknown}</strong></article>
         <article><span>Faol qarzdorlar</span><strong>{states.length}</strong></article>
         <article><span>3/3 SMS yuborilgan</span><strong>{states.filter((item) => item.warningCount >= 3).length}</strong></article>
-        <article><span>Oxirgi eventlar</span><strong>{events.length}</strong></article>
       </div>
     </section>
 
-    {canManageDevices && <section className="face-access-card">
+    <nav className="face-access-tabs" aria-label="FaceID bo‘limlari">
+      <button className={activeTab === 'presence' ? 'active' : ''} onClick={() => setActiveTab('presence')}>Joriy holat</button>
+      <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Kirish-chiqish tarixi</button>
+      <button className={activeTab === 'debt' ? 'active' : ''} onClick={() => setActiveTab('debt')}>Qarzdorlik SMS</button>
+      {canManageDevices && <button className={activeTab === 'devices' ? 'active' : ''} onClick={() => setActiveTab('devices')}>Qurilmalar</button>}
+    </nav>
+
+    {activeTab === 'devices' && canManageDevices && <section className="face-access-card">
       <header><div><h3>Hikvision qurilmalar</h3><p>Kirish va chiqish terminallari alohida Callback URL orqali ishlaydi. Backend eshik buyrug‘i yubormaydi.</p></div><button onClick={() => { deviceForm.setFieldsValue({ name: 'Asosiy kirish', model: 'DS-K1T341CMF', direction: 'IN' }); setDeviceModal(true) }}>+ Qurilma</button></header>
       {deviceError ? <div className="face-access-state error">{apiErrorMessage(deviceError)}</div> : devicesLoading ? <div className="face-access-state">Yuklanmoqda…</div> : <div className="face-access-table-wrap"><table><thead><tr><th>Qurilma</th><th>Ulanish</th><th>Yo‘nalish</th><th>Vazifa</th><th>Callback URL</th><th>Amal</th></tr></thead><tbody>
         {devices.map((device) => <tr key={device.id}><td><strong>{device.name}</strong><small>{device.model}</small></td><td><code>Outbound HTTPS</code><small><span className={`device-online-dot ${device.online ? 'online' : ''}`} />{device.online ? 'Online' : 'Offline'} · HTTP Listening</small></td><td><span className={`access-chip ${device.direction === 'OUT' ? 'exit' : 'granted'}`}>{directionName(device.direction)}</span></td><td><strong>{device.direction === 'OUT' ? 'Chiqish + presence' : 'Davomat + SMS + presence'}</strong><small>Remote Verification o‘chiq</small></td><td><button className="callback-button" onClick={() => copyCallback(device)} title={callbackUrl(device)}>URL nusxalash</button></td><td><div className="face-device-actions"><button className={device.isActive ? 'danger' : ''} onClick={() => toggleDevice(device, 'isActive')} disabled={updatingDevice}>{device.isActive ? 'O‘chirish' : 'Faollashtirish'}</button></div></td></tr>)}
@@ -105,37 +98,29 @@ export function FaceAccessPage({ currentEmployee }) {
       </tbody></table></div>}
     </section>}
 
-    <section className="face-access-card">
+    {activeTab === 'presence' && <section className="face-access-card">
       <header><div><h3>Talabalarning joriy holati</h3><p>Hozirgi bitta kirish qurilmasi kirganlarni ko‘rsatadi. Chiqish terminali o‘rnatilgach holat avtomatik yopiladi.</p></div><span className="face-access-total">Jami {presenceSummary.total} talaba</span></header>
       {presenceError ? <div className="face-access-state error">{apiErrorMessage(presenceError)}</div> : presenceLoading ? <div className="face-access-state">Yuklanmoqda…</div> : <div className="face-access-table-wrap"><table><thead><tr><th>Talaba</th><th>Xona</th><th>Holat</th><th>Oxirgi kirish</th><th>Oxirgi chiqish</th><th>Oxirgi qurilma</th></tr></thead><tbody>
         {presenceRows.map((row) => <tr key={row.student.id}><td><strong>{row.student.fullName}</strong><small>{row.student.faceIdCode || 'FaceID biriktirilmagan'}</small></td><td>{row.room ? <><strong>{row.room.block ? `${row.room.block} · ` : ''}{row.room.roomNumber}-xona</strong><small>{row.room.floor}-qavat</small></> : '—'}</td><td><span className={`presence-chip ${row.status}`}>{row.status === 'inside' ? 'Binoda' : row.status === 'outside' ? 'Tashqarida' : 'Aniqlanmagan'}</span></td><td>{dateTime(row.lastEntryAt)}</td><td>{dateTime(row.lastExitAt)}</td><td><strong>{row.lastDevice?.name || '—'}</strong><small>{row.lastDirection ? directionName(row.lastDirection) : ''}</small></td></tr>)}
         {!presenceRows.length && <tr><td colSpan="6" className="face-access-state">Faol shartnomali talabalar topilmadi</td></tr>}
       </tbody></table></div>}
-    </section>
+    </section>}
 
-    <section className="face-access-card">
+    {activeTab === 'history' && <section className="face-access-card">
       <header><div><h3>Kirish-chiqish tarixi</h3><p>Har bir kirish uchun chiqish vaqti, davomiyligi va ishlatilgan qurilmalar.</p></div><DatePicker picker="month" allowClear={false} value={dayjs(`${sessionMonth}-01`)} format="MMMM YYYY" onChange={(value) => value && setSessionMonth(value.format('YYYY-MM'))} /></header>
       {sessionsError ? <div className="face-access-state error">{apiErrorMessage(sessionsError)}</div> : sessionsLoading ? <div className="face-access-state">Yuklanmoqda…</div> : <div className="face-access-table-wrap"><table><thead><tr><th>Sana</th><th>Talaba</th><th>Kirish</th><th>Chiqish</th><th>Davomiylik</th><th>Qurilmalar</th><th>Holat</th></tr></thead><tbody>
         {sessions.map((session) => <tr key={session.id}><td>{dateOnly(session.entryAt)}</td><td><strong>{session.student?.fullName || 'Talaba o‘chirilgan'}</strong><small>{session.student?.faceIdCode || ''}</small></td><td><strong>{timeOnly(session.entryAt)}</strong><small>{session.entryDevice?.name || 'Eski event'}</small></td><td><strong>{timeOnly(session.exitAt)}</strong><small>{session.exitDevice?.name || ''}</small></td><td>{session.status === 'closed' ? durationText(session.durationMinutes) : session.status === 'open' ? 'Davom etmoqda' : 'Hisoblanmadi'}</td><td><span className="movement-route"><i>IN</i><b>→</b><i className={session.exitAt ? 'out' : ''}>{session.exitAt ? 'OUT' : '…'}</i></span></td><td><span className={`session-chip ${session.status}`}>{session.status === 'open' ? 'Binoda' : session.status === 'closed' ? 'Yakunlangan' : 'Chiqish qaydi yo‘q'}</span></td></tr>)}
         {!sessions.length && <tr><td colSpan="7" className="face-access-state">Bu oyda kirish-chiqish tarixi yo‘q</td></tr>}
       </tbody></table></div>}
-    </section>
+    </section>}
 
-    <section className="face-access-card">
+    {activeTab === 'debt' && <section className="face-access-card">
       <header><div><h3>Qarzdorlik SMS holati</h3><p>Qarzdorga ko‘pi bilan 3 marta SMS yuboriladi. Eshik hech qachon backend tomonidan bloklanmaydi.</p></div></header>
       {stateError ? <div className="face-access-state error">{apiErrorMessage(stateError)}</div> : statesLoading ? <div className="face-access-state">Yuklanmoqda…</div> : <div className="face-access-table-wrap"><table><thead><tr><th>Talaba</th><th>FaceID kodi</th><th>Qarz</th><th>SMS</th><th>Holat</th><th>Amal</th></tr></thead><tbody>
         {states.map((state) => <tr key={state.id}><td><strong>{state.student?.fullName || 'Talaba topilmadi'}</strong><small>{state.student?.phone || ''}</small></td><td><code>{state.student?.faceIdCode || '—'}</code></td><td>{money(state.lastDebtAmount)}</td><td><b>{state.warningCount}/3</b></td><td><span className={state.warningCount >= 3 ? 'access-chip granted' : 'access-chip warning'}>{state.warningCount >= 3 ? 'SMS limiti tugagan' : 'Ogohlantirilmoqda'}</span></td><td>{canReset ? <Popconfirm title="SMS hisobini nollash" description="Talabaga yana 3 martagacha SMS yuborish boshlanadi. Davom etilsinmi?" okText="Nollash" cancelText="Yo‘q" onConfirm={() => reset(state.student?.id)}><button disabled={resetting || !state.student?.id}>SMS hisobini nollash</button></Popconfirm> : '—'}</td></tr>)}
         {!states.length && <tr><td colSpan="6" className="face-access-state">Faol qarzdorlik ogohlantirishi yo‘q</td></tr>}
       </tbody></table></div>}
-    </section>
-
-    <section className="face-access-card">
-      <header><div><h3>FaceID eventlar jurnali</h3><p>Qurilmalar yuborgan oxirgi 150 ta kirish va chiqish eventi.</p></div><Select allowClear placeholder="Barcha holatlar" value={decision || undefined} onChange={(value) => setDecision(value || '')} options={Object.entries(decisions).map(([value, item]) => ({ value, label: item[0] }))} /></header>
-      {eventError ? <div className="face-access-state error">{apiErrorMessage(eventError)}</div> : eventsLoading ? <div className="face-access-state">Yuklanmoqda…</div> : <div className="face-access-table-wrap"><table><thead><tr><th>Vaqt</th><th>Talaba</th><th>Yo‘nalish</th><th>Qaror</th><th>Qarz</th><th>SMS</th><th>Qurilma</th></tr></thead><tbody>
-        {events.map((event) => { const item = event.direction === 'OUT' ? ['Chiqish qaydi', 'exit'] : decisions[event.decision] || [event.decision, 'denied']; return <tr key={event.id}><td>{dateTime(event.occurredAt)}</td><td><strong>{event.student?.fullName || event.faceIdCode}</strong><small>{event.reason}</small></td><td><span className={`access-chip ${event.direction === 'OUT' ? 'exit' : 'granted'}`}>{directionName(event.direction)}</span></td><td><span className={`access-chip ${item[1]}`}>{item[0]}</span></td><td>{event.direction === 'OUT' ? '—' : money(event.debtAmount)}</td><td>{event.direction === 'OUT' ? '—' : event.smsStatus === 'sent' ? `${event.warningCount}/3 yuborildi` : ['queued', 'sending'].includes(event.smsStatus) ? `${event.warningCount}/3 navbatda` : event.smsStatus === 'failed' ? 'Qayta urinadi' : event.smsStatus === 'duplicate' ? 'Takroriy' : event.smsStatus === 'limit_reached' ? '3/3, yangi SMS yo‘q' : '—'}</td><td><code>{event.deviceKey || '—'}</code></td></tr> })}
-        {!events.length && <tr><td colSpan="7" className="face-access-state">FaceID eventi hali yo‘q</td></tr>}
-      </tbody></table></div>}
-    </section>
+    </section>}
 
     <Modal open={deviceModal} onCancel={() => setDeviceModal(false)} footer={null} title="Hikvision DS-K1T341CMF qo‘shish" destroyOnHidden>
       <Form form={deviceForm} layout="vertical" onFinish={addDevice} requiredMark={false}>

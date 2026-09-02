@@ -15,9 +15,11 @@ import {
   apiErrorMessage,
   useCreatePaymentMutation,
   useGetDebtorsQuery,
+  useGetGeneralSettingsQuery,
   useSendDebtorSmsMutation,
   useSetDebtorDeadlineMutation,
 } from "../../store/baseApi";
+import { printPaymentReceipt } from "../payments/paymentReceipt";
 import "./Debtors.css";
 
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
@@ -29,6 +31,7 @@ export function DebtorsPage({ currentEmployee }) {
   const [paymentForm] = Form.useForm();
   const [period, setPeriod] = useState(dayjs().format("YYYY-MM"));
   const { data, isLoading, error } = useGetDebtorsQuery(period);
+  const { data: settingsData } = useGetGeneralSettingsQuery();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -42,7 +45,11 @@ export function DebtorsPage({ currentEmployee }) {
   const [setDebtorDeadline, { isLoading: savingDeadline }] = useSetDebtorDeadlineMutation();
   const [sendDebtorSms, { isLoading: sendingSms }] = useSendDebtorSmsMutation();
   const isOwner = ["owner", "admin"].includes(currentEmployee?.role);
-  const paymentMethod = Form.useWatch("method", paymentForm);
+  const paymentParts = Form.useWatch("paymentParts", paymentForm) || {};
+  const partsTotal = Object.values(paymentParts).reduce(
+    (sum, value) => sum + (Number(value) || 0),
+    0,
+  );
   const selectedInstallmentId = Form.useWatch("installment", paymentForm);
   const selectedPeriod = paymentDebtor?.periods.find(
     (item) => item.id === selectedInstallmentId,
@@ -66,8 +73,9 @@ export function DebtorsPage({ currentEmployee }) {
     setPaymentDebtor(debtor);
     paymentForm.setFieldsValue({
       installment: first?.id,
-      amount: null,
-      method: "cash",
+      paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
+      paymentDates: {},
+      payerType: "",
       note: "",
     });
   };
@@ -76,13 +84,21 @@ export function DebtorsPage({ currentEmployee }) {
       const paymentPeriod = paymentDebtor.periods.find(
         (item) => item.id === values.installment,
       );
-      await createPayment({
+      if (!partsTotal || partsTotal > paymentPeriod.debt) {
+        toast.error(partsTotal ? "To‘lov summasi qarzdorlikdan oshmasligi kerak" : "Kamida bitta to‘lov usuliga summa kiriting");
+        return;
+      }
+      const paymentParts = Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() }));
+      const result = await createPayment({
         contract: paymentPeriod.contractId,
         installment: paymentPeriod.id,
-        amount: Number(values.amount),
-        method: values.method,
+        amount: partsTotal,
+        method: paymentParts[0].method,
+        paymentParts,
+        payerType: values.payerType,
         note: values.note || "",
       }).unwrap();
+      printPaymentReceipt(result.payment, settingsData?.settings);
       toast.success("To‘lov muvaffaqiyatli qabul qilindi");
       setPaymentDebtor(null);
       paymentForm.resetFields();
@@ -437,7 +453,7 @@ export function DebtorsPage({ currentEmployee }) {
         open={Boolean(paymentDebtor)}
         onCancel={() => setPaymentDebtor(null)}
         footer={null}
-        width={580}
+        width={910}
         title={
           paymentDebtor
             ? `${paymentDebtor.student.fullName} — to‘lov qilish`
@@ -458,7 +474,7 @@ export function DebtorsPage({ currentEmployee }) {
             rules={[{ required: true, message: "Davrni tanlang" }]}
           >
             <Select
-              onChange={() => paymentForm.setFieldValue("amount", null)}
+              onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {} })}
               options={(paymentDebtor?.periods || []).map((paymentPeriod) => ({
                 value: paymentPeriod.id,
                 label: `${paymentPeriod.periodKey} — ${money(paymentPeriod.debt)} qoldiq`,
@@ -471,40 +487,19 @@ export function DebtorsPage({ currentEmployee }) {
               <strong>{money(selectedPeriod.debt)}</strong>
             </div>
           )}
-          <Form.Item
-            name="amount"
-            label="To‘lov summasi"
-            rules={[{ required: true, message: "Summani kiriting" }]}
-          >
-            <InputNumber
-              min={1}
-              max={selectedPeriod?.debt}
-              precision={0}
-              addonAfter="so‘m"
-              formatter={(value) =>
-                String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")
-              }
-              parser={(value) => String(value || "").replace(/[^\d]/g, "")}
-            />
-          </Form.Item>
-          <Form.Item name="method" hidden rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <div className="debtor-method-field">
-            <label>To‘lov turi</label>
-            <div>
-              {Object.entries(methods).map(([value, label]) => (
-                <button
-                  type="button"
-                  key={value}
-                  className={paymentMethod === value ? "active" : ""}
-                  onClick={() => paymentForm.setFieldValue("method", value)}
-                >
-                  {label}
-                </button>
+          <div className="debtor-payment-split">
+            <label>To‘lov usullari bo‘yicha summa va sana</label>
+            <div className="debtor-payment-methods">
+              {Object.entries(methods).map(([method, label]) => (
+                <div className="debtor-payment-method-row" key={method}>
+                  <Form.Item name={["paymentParts", method]} label={label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/[^\d]/g, "")} /></Form.Item>
+                  <Form.Item name={["paymentDates", method]} label="To‘lov sanasi va vaqti" rules={Number(paymentParts[method] || 0) > 0 ? [{ required: true, message: `${label} sanasini tanlang` }] : []}><DatePicker disabled={Number(paymentParts[method] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
+                </div>
               ))}
             </div>
+            <div className={`debtor-payment-total ${partsTotal > Number(selectedPeriod?.debt || 0) ? "invalid" : ""}`}><div><small>Jami to‘lov</small><strong>{money(partsTotal)}</strong></div><div><small>Maksimal</small><strong>{money(selectedPeriod?.debt)}</strong></div></div>
           </div>
+          <Form.Item name="payerType" label="To‘lovni kim qildi?" rules={[{ required: true, whitespace: true, message: "To‘lovchini kiriting" }]}><Input maxLength={150} placeholder="Masalan: otasi yoki talabaning o‘zi" /></Form.Item>
           <Form.Item name="note" label="Izoh">
             <Input placeholder="Ixtiyoriy" />
           </Form.Item>

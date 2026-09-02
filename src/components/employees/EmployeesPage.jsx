@@ -58,7 +58,7 @@ const EmployeeRow = memo(function EmployeeRow({ employee, schedule, isShop, isDe
       <td data-label="F.I.SH"><strong>{employee.firstname} {employee.lastname}</strong><small className="employee-face-code">{employee.faceIdCode || 'FaceID kodi yo‘q'}</small></td>
       <td data-label="Lavozim"><strong>{employee.position}</strong><small className="employee-work-time">Umumiy grafik: {schedule?.checkInTime || '09:00'}–{schedule?.checkOutTime || '18:00'}</small></td>
       <td data-label="Oylik">{Number(employee.salary || 0).toLocaleString('uz-UZ')}</td>
-      {!isShop && <td data-label="Rol"><span className={`employee-role ${employee.role}`}>{employee.role === 'owner' || employee.role === 'admin' ? 'Owner' : employee.role === 'manager' ? 'Menejer' : employee.role === 'cashier' ? 'Kassir' : 'Xodim'}</span></td>}
+      {!isShop && <td data-label="Rol"><span className={`employee-role ${employee.role}`}>{employee.role === 'owner' || employee.role === 'admin' ? 'Owner' : employee.role === 'manager' ? 'Menejer' : employee.role === 'head_cashier' ? 'Bosh kassir' : employee.role === 'cashier' ? 'Kassir' : 'Xodim'}</span></td>}
       {!isShop && <td data-label="Login">{employee.login || '-'}</td>}
       {!isShop && <td data-label="Ruxsatlar">
         {(employee.sections || []).length ? (
@@ -319,7 +319,7 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
           </section>
           {!isShop && <Form.Item name="canLogin" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Dasturga kira oladi</Checkbox></Form.Item>}
           {!isShop && canLogin && <>
-            <Form.Item name="role" label="Xodim roli" rules={[{ required: true }]}><Select options={[{ value: 'employee', label: 'Xodim' }, { value: 'manager', label: 'Menejer' }, { value: 'cashier', label: 'Kassir' }, { value: 'owner', label: 'Owner' }]} /></Form.Item>
+            <Form.Item name="role" label="Xodim roli" rules={[{ required: true }]}><Select options={[{ value: 'employee', label: 'Xodim' }, { value: 'manager', label: 'Menejer' }, { value: 'cashier', label: 'Kassir' }, { value: 'head_cashier', label: 'Bosh kassir' }, { value: 'owner', label: 'Owner' }]} /></Form.Item>
             <div className="employee-form-grid">
               <Form.Item name="login" label="Login" rules={[{ required: true, whitespace: true, min: 3, message: 'Login kamida 3 ta belgi bo‘lsin' }]}><Input placeholder="Login kiriting" /></Form.Item>
               <Form.Item name="password" label={editingId ? 'Yangi parol (ixtiyoriy)' : 'Parol'} rules={[{ required: !editingId, min: 8, message: 'Parol kamida 8 ta belgi bo‘lsin' }]}><Input.Password placeholder="Parol kiriting" /></Form.Item>

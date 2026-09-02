@@ -266,3 +266,5 @@
   .contract-requisites > div > div { min-height: 105px; padding: 8px; }
   .contract-requisites { break-before: auto; break-inside: auto; page-break-before: auto; page-break-inside: auto; }
 }
+.payment-method-breakdown { display: flex; flex-wrap: wrap; gap: 4px; }
+.payment-method-breakdown .method-badge { white-space: nowrap; }

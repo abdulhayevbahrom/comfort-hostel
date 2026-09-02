@@ -419,7 +419,7 @@ export function DashboardPage() {
           icon="debt"
           label="Talabalar jami qarzi"
           value={money(d.amount)}
-          detail={`${rangeEnd.format("MMMM YYYY")} qarzi · ${d.students || 0} talaba`}
+          detail={`Muddati kelgan jami qarz · ${d.students || 0} talaba`}
           onClick={() => navigate("/debtors")}
         />
       </section>

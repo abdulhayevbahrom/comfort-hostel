@@ -72,7 +72,7 @@ export const baseApi = createApi({
       providesTags: [{ type: 'Dashboard', id: 'MAIN' }],
       async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
         const refresh = () => scheduleInvalidate(dispatch, [{ type: 'Dashboard', id: 'MAIN' }], 'Dashboard:MAIN')
-        const events = ['students:changed', 'student-contracts:changed', 'rooms:changed', 'payments:changed', 'expenses:changed', 'fines:changed', 'attendance:changed', 'salaries:changed', 'employees:changed']
+        const events = ['students:changed', 'student-contracts:changed', 'rooms:changed', 'payments:changed', 'central-cash:changed', 'expenses:changed', 'fines:changed', 'attendance:changed', 'salaries:changed', 'employees:changed']
         const unsubscribe = subscribeSocket(events, refresh)
         await cacheEntryRemoved
         unsubscribe()
@@ -537,6 +537,11 @@ export const baseApi = createApi({
       transformResponse: (response) => response.data,
       invalidatesTags: [{ type: 'Payment', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Payment', id: 'ADVANCE' }, { type: 'StudentContract', id: 'LIST' }, { type: 'Debtor', id: 'LIST' }],
     }),
+    createDepositPayment: builder.mutation({
+      query: ({ studentId, paymentParts }) => ({ url: `/students/${studentId}/deposit-payments`, method: 'POST', body: { paymentParts } }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: [{ type: 'Student', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
+    }),
     deletePayment: builder.mutation({
       query: (id) => ({ url: `/payments/${id}`, method: 'DELETE' }),
       invalidatesTags: [{ type: 'Payment', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Payment', id: 'ADVANCE' }, { type: 'StudentContract', id: 'LIST' }, { type: 'Debtor', id: 'LIST' }],
@@ -672,7 +677,7 @@ export const baseApi = createApi({
     approveCashSession: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/cash-sessions/${id}/approve`, method: 'PUT', body }),
       transformResponse: (response) => response.data,
-      invalidatesTags: [{ type: 'CashSession', id: 'LIST' }],
+      invalidatesTags: [{ type: 'CashSession', id: 'LIST' }, { type: 'Dashboard', id: 'MAIN' }],
     }),
     cancelCashSession: builder.mutation({
       query: (id) => ({ url: `/cash-sessions/${id}/cancel`, method: 'PUT' }),
@@ -808,6 +813,7 @@ export const {
   useUpdateFineMutation,
   useDeleteFineMutation,
   useCreatePaymentMutation,
+  useCreateDepositPaymentMutation,
   useDeletePaymentMutation,
   useUpdatePaymentMutation,
   useGetUniversitiesQuery,

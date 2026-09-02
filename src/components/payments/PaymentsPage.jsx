@@ -8,12 +8,14 @@ import {
   Modal,
   Popconfirm,
   Select,
+  Segmented,
 } from "antd";
 import dayjs from "dayjs";
 import { toast } from "react-toastify";
 import {
   apiErrorMessage,
   useCreatePaymentMutation,
+  useCreateDepositPaymentMutation,
   useDeletePaymentMutation,
   useGetGeneralSettingsQuery,
   useGetPaymentOptionsQuery,
@@ -22,11 +24,13 @@ import {
 } from "../../store/baseApi";
 import { PaymentPrintIcon } from "./PaymentReceiptModal";
 import { printPaymentReceipt } from "./paymentReceipt";
+import { printDepositReceipt } from "./depositReceipt";
 import { AdvancePaymentsTab } from "./AdvancePaymentsTab";
 import "./Payments.css";
 import { canEditOrDelete } from "../../utils/permissions";
+import { groupPayments } from "../../utils/groupPayments";
 
-const methods = { cash: "Naqd", online: "Click", bank: "Bank", card: "Karta" };
+const methods = { cash: "Naqd", online: "Click", card: "Karta", bank: "Bank" };
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
 const statMoney = (value) => money(value).replace(/\sso‘m$/, "");
 
@@ -49,13 +53,20 @@ export function PaymentsPage({ currentEmployee }) {
     useGetPaymentOptionsQuery(undefined, { skip: !open });
   const { data: settingsData } = useGetGeneralSettingsQuery();
   const [createPayment, { isLoading: saving }] = useCreatePaymentMutation();
+  const [createDepositPayment, { isLoading: savingDeposit }] = useCreateDepositPaymentMutation();
   const [updatePayment, { isLoading: updating }] = useUpdatePaymentMutation();
   const [deletePayment, { isLoading: deleting }] = useDeletePaymentMutation();
   const selectedContractId = Form.useWatch("contract", form);
   const selectedMethod = Form.useWatch("method", form);
-  const selectedFundHolder = Form.useWatch("fundHolder", form);
   const selectedInstallmentId = Form.useWatch("installment", form);
+  const paymentKind = Form.useWatch("paymentKind", form) || "contract";
+  const paymentParts = Form.useWatch("paymentParts", form) || {};
+  const selectedDepositStudentId = Form.useWatch("student", form);
   const contracts = optionsData?.contracts || [];
+  const depositStudents = optionsData?.students || [];
+  const selectedDepositStudent = depositStudents.find((item) => item._id === selectedDepositStudentId);
+  const partsTotal = Object.values(paymentParts).reduce((sum, value) => sum + (Number(value) || 0), 0);
+  const buildParts = (values) => Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([partMethod, partAmount]) => ({ method: partMethod, amount: Number(partAmount), paidAt: values.paymentDates?.[partMethod]?.toISOString() }));
   const selectableContracts = editingPayment
     ? contracts
     : contracts.filter((item) => item.balance > 0);
@@ -67,7 +78,7 @@ export function PaymentsPage({ currentEmployee }) {
   const selectedInstallment = installments.find(
     (item) => item._id === selectedInstallmentId,
   );
-  const rows = useMemo(() => data?.payments || [], [data?.payments]);
+  const rows = useMemo(() => groupPayments(data?.payments || []), [data?.payments]);
   const summary = data?.summary || {};
   const isOwner = canEditOrDelete(currentEmployee);
   const availableBalance = selectedInstallment
@@ -79,6 +90,10 @@ export function PaymentsPage({ currentEmployee }) {
     setEditingPayment(null);
     form.setFieldsValue({
       method: "cash",
+      paymentKind: "contract",
+      student: undefined,
+      paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
+      paymentDates: { cash: null, online: null, card: null, bank: null },
       amount: null,
       contract: undefined,
       installment: undefined,
@@ -112,11 +127,15 @@ export function PaymentsPage({ currentEmployee }) {
         }).unwrap();
         toast.success("To‘lov yangilandi");
       } else {
-        const result = await createPayment({
-          ...values,
-          amount: Number(values.amount),
-        }).unwrap();
-        printPaymentReceipt(result.payment, settingsData?.settings);
+        const parts = buildParts(values);
+        if (!parts.length) throw new Error("To‘lov summalarini kiriting");
+        if (values.paymentKind === "deposit") {
+          const result = await createDepositPayment({ studentId: values.student, paymentParts: parts }).unwrap();
+          printDepositReceipt(result.student, result.payments, settingsData?.settings);
+        } else {
+          const result = await createPayment({ ...values, amount: partsTotal, method: parts[0].method, paymentParts: parts }).unwrap();
+          printPaymentReceipt(result.payment, settingsData?.settings);
+        }
         toast.success("To‘lov muvaffaqiyatli qabul qilindi");
       }
       setOpen(false);
@@ -265,7 +284,7 @@ export function PaymentsPage({ currentEmployee }) {
                     </td>
                     <td data-label="Shartnoma">
                       <span className="contract-pill">
-                        {payment.contract?.contractNumber}
+                        {payment.isDeposit ? "Depozit" : payment.contract?.contractNumber}
                       </span>
                       <small>
                         {payment.contract?.room
@@ -275,7 +294,7 @@ export function PaymentsPage({ currentEmployee }) {
                     </td>
                     <td data-label="Oy">
                       <span className="payment-period">
-                        {payment.allocations?.[0]?.installment?.periodKey ||
+                        {payment.isDeposit ? "Depozit" : payment.allocations?.[0]?.installment?.periodKey ||
                           "—"}
                       </span>
                     </td>
@@ -284,10 +303,14 @@ export function PaymentsPage({ currentEmployee }) {
                       <small>{dayjs(payment.createdAt).format("HH:mm")}</small>
                     </td>
                     <td data-label="Usul">
-                      <span className={`method-badge ${payment.method}`}>
-                        {methods[payment.method]}
-                      </span>
-                      {payment.method !== "cash" && payment.fundHolder && <small>{payment.fundHolder === "organization" ? "Tashkilot hisobi" : "Kassirning shaxsiy hisobi"}</small>}
+                      <div className="payment-method-breakdown">
+                        {payment.breakdown?.map((part, index) => (
+                          <span className={`method-badge ${part.method}`} key={`${part.method}-${index}`}>
+                            {methods[part.method]} · {money(part.amount)}
+                          </span>
+                        ))}
+                      </div>
+                      {!payment.isGrouped && payment.method !== "cash" && payment.fundHolder && <small>{payment.fundHolder === "organization" ? "Tashkilot hisobi" : "Kassirning shaxsiy hisobi"}</small>}
                     </td>
                     <td data-label="To‘lovchi">
                       <strong>{payment.payerType || "—"}</strong>
@@ -312,15 +335,17 @@ export function PaymentsPage({ currentEmployee }) {
                           title="Chek"
                           aria-label="To‘lov chekini chiqarish"
                           onClick={() =>
-                            printPaymentReceipt(payment, settingsData?.settings)
+                            payment.isDeposit
+                              ? printDepositReceipt(payment.student, payment.breakdown, settingsData?.settings)
+                              : printPaymentReceipt(payment, settingsData?.settings)
                           }
                         >
                           <PaymentPrintIcon />
                         </button>
-                        <button className="payment-history" title="Amallar tarixi" aria-label="To‘lov amallari tarixini ko‘rish" onClick={() => setHistoryPayment(payment)}>
+                        {!payment.isDeposit && !payment.isGrouped && <button className="payment-history" title="Amallar tarixi" aria-label="To‘lov amallari tarixini ko‘rish" onClick={() => setHistoryPayment(payment)}>
                           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5l3 2M4.5 9A8 8 0 1 1 4 12M4 5v4h4" /></svg>
-                        </button>
-                        {isOwner && payment.status !== "cancelled" && (
+                        </button>}
+                        {isOwner && !payment.isDeposit && payment.status !== "cancelled" && !payment.isGrouped && (
                           <>
                             <button
                               className="payment-edit"
@@ -411,7 +436,7 @@ export function PaymentsPage({ currentEmployee }) {
         title={
           editingPayment ? "To‘lovni tahrirlash" : "Yangi to‘lov qabul qilish"
         }
-        width={660}
+        width={910}
         rootClassName="payment-modal"
         destroyOnHidden
       >
@@ -421,6 +446,12 @@ export function PaymentsPage({ currentEmployee }) {
           requiredMark={false}
           onFinish={submit}
         >
+          {!editingPayment && <Form.Item name="paymentKind" label="To‘lov yo‘nalishi"><Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi" }, { value: "deposit", label: "Depozit to‘lovi" }]} /></Form.Item>}
+          {paymentKind === "deposit" && !editingPayment && <>
+            <Form.Item name="student" label="Talaba" rules={[{ required: true, message: "Talabani tanlang" }]}><Select showSearch loading={optionsLoading} optionFilterProp="label" placeholder="Talabani qidiring" options={depositStudents.map((item) => ({ value: item._id, label: `${item.fullName} — ${money(item.balance)} depozit qarzi` }))} /></Form.Item>
+            {selectedDepositStudent && <div className="selected-contract"><div><small>Talaba</small><b>{selectedDepositStudent.fullName}</b></div><div><small>Depozit summasi</small><b>{money(selectedDepositStudent.depositAmount || 700000)}</b></div><div><small>Qoldiq</small><b>{money(selectedDepositStudent.balance)}</b></div></div>}
+          </>}
+          {(paymentKind === "contract" || editingPayment) && <>
           <Form.Item
             name="contract"
             label="Talaba va shartnoma"
@@ -473,6 +504,8 @@ export function PaymentsPage({ currentEmployee }) {
               </div>
             </div>
           )}
+          </>}
+          {editingPayment ? <>
           <Form.Item
             name="amount"
             label="To‘lov summasi"
@@ -490,17 +523,25 @@ export function PaymentsPage({ currentEmployee }) {
               parser={(v) => String(v || "").replace(/[^\d]/g, "")}
             />
           </Form.Item>
+          </> : <div className="payment-split-fields">
+            <label>To‘lov usullari bo‘yicha summa va sana</label>
+            <div className="payment-method-rows">{Object.entries(methods).map(([partMethod, label]) => <div className="payment-method-row" key={partMethod}>
+              <Form.Item name={["paymentParts", partMethod]} label={label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(v) => String(v || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(v) => String(v || "").replace(/[^\d]/g, "")} /></Form.Item>
+              <Form.Item name={["paymentDates", partMethod]} label="To‘lov sanasi va vaqti" rules={Number(paymentParts[partMethod] || 0) > 0 ? [{ required: true, message: `${label} sanasini tanlang` }] : []}><DatePicker disabled={Number(paymentParts[partMethod] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
+            </div>)}</div>
+            <div className="selected-contract"><div><small>Jami to‘lov</small><b>{money(partsTotal)}</b></div><div><small>Maksimal</small><b>{money(paymentKind === "deposit" ? selectedDepositStudent?.balance : availableBalance)}</b></div></div>
+          </div>}
           <Form.Item name="payerType" label="To‘lovni kim qildi?" rules={[{ required: true, whitespace: true, message: "To‘lovchini kiriting" }]}>
             <Input maxLength={150} placeholder="Masalan: otasi yoki talabaning o‘zi" />
           </Form.Item>
-          <Form.Item
+          {editingPayment && <Form.Item
             name="method"
             hidden
             rules={[{ required: true, message: "To‘lov usulini tanlang" }]}
           >
             <Input />
-          </Form.Item>
-          <div className="method-field">
+          </Form.Item>}
+          {editingPayment && <div className="method-field">
             <label>To‘lov turi</label>
             <div className="method-options">
               {Object.entries(methods).map(([value, label]) => (
@@ -514,17 +555,7 @@ export function PaymentsPage({ currentEmployee }) {
                 </button>
               ))}
             </div>
-          </div>
-          {!editingPayment && currentEmployee?.role === "cashier" && !["cash", "bank"].includes(selectedMethod) && (
-            <div className="fund-holder-field">
-              <label>Pul qaysi hisobga tushdi?</label>
-              <Form.Item name="fundHolder" hidden rules={[{ required: true, message: "Hisobni tanlang" }]}><Input /></Form.Item>
-              <div className="fund-holder-options">
-                <button type="button" className={selectedFundHolder === "cashier" ? "active" : ""} onClick={() => form.setFieldValue("fundHolder", "cashier")}>O‘zimga</button>
-                <button type="button" className={selectedFundHolder === "organization" ? "active" : ""} onClick={() => form.setFieldValue("fundHolder", "organization")}>Tashkilotga</button>
-              </div>
-            </div>
-          )}
+          </div>}
           <Form.Item name="note" label="Izoh">
             <Input placeholder="Ixtiyoriy" />
           </Form.Item>
@@ -533,7 +564,7 @@ export function PaymentsPage({ currentEmployee }) {
             <Button
               type="primary"
               htmlType="submit"
-              loading={saving || updating}
+              loading={saving || savingDeposit || updating}
             >
               {editingPayment ? "Saqlash" : "To‘lovni tasdiqlash"}
             </Button>

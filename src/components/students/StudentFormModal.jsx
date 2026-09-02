@@ -31,7 +31,7 @@ const initialValues = {
   depositPaymentMethod: undefined,
   depositReceivedAt: null,
   depositPayments: { cash: 0, online: 0, card: 0, bank: 0 },
-  depositOnlinePaidAt: null,
+  depositPaymentDates: { cash: null, online: null, card: null, bank: null },
   university: undefined,
   faculty: undefined,
   address: "",
@@ -78,6 +78,7 @@ export function StudentFormModal({
   const hasTaxContract = Form.useWatch("hasTaxContract", form);
   const depositType = Form.useWatch("depositType", form);
   const depositPayments = Form.useWatch("depositPayments", form) || {};
+  const depositAmount = Number(Form.useWatch("depositAmount", form) || 0);
   const gender = Form.useWatch("gender", form);
   const studentStatus = Form.useWatch("studentStatus", form);
   const universities = universityData?.universities || [];
@@ -122,9 +123,10 @@ export function StudentFormModal({
             depositPayments: student.depositPayments?.length
               ? Object.fromEntries(["cash", "online", "card", "bank"].map((method) => [method, student.depositPayments.filter((payment) => payment.method === method).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)]))
               : { cash: student.depositPaymentMethod === "cash" ? Number(student.depositAmount || 0) : 0, online: student.depositPaymentMethod === "online" ? Number(student.depositAmount || 0) : 0, card: student.depositPaymentMethod === "card" ? Number(student.depositAmount || 0) : 0, bank: student.depositPaymentMethod === "bank" ? Number(student.depositAmount || 0) : 0 },
-            depositOnlinePaidAt: student.depositPayments?.find((payment) => payment.method === "online")?.paidAt
-              ? dayjs(student.depositPayments.find((payment) => payment.method === "online").paidAt)
-              : student.depositPaymentMethod === "online" && student.depositReceivedAt ? dayjs(student.depositReceivedAt) : null,
+            depositPaymentDates: Object.fromEntries(["cash", "online", "card", "bank"].map((method) => {
+              const paidAt = student.depositPayments?.find((payment) => payment.method === method)?.paidAt;
+              return [method, paidAt ? dayjs(paidAt) : student.depositPaymentMethod === method && student.depositReceivedAt ? dayjs(student.depositReceivedAt) : null];
+            })),
           }
         : initialValues,
     );
@@ -236,7 +238,7 @@ export function StudentFormModal({
               depositPaymentMethod: undefined,
               depositReceivedAt: null,
               depositPayments: { cash: 0, online: 0, card: 0, bank: 0 },
-              depositOnlinePaidAt: null,
+              depositPaymentDates: { cash: null, online: null, card: null, bank: null },
             });
           if (changed.depositType === "passport")
             form.setFieldValue("depositPaymentMethod", undefined);
@@ -378,15 +380,14 @@ export function StudentFormModal({
           )}
           {depositType === "money" && (
             <Form.Item className="student-deposit-details" label="To‘langan depozit — usullar bo‘yicha">
-              <div className="student-deposit-payment-grid">
-                {[{ value: "cash", label: "Naqd" }, { value: "online", label: "Click" }, { value: "card", label: "Karta" }, { value: "bank", label: "Bank" }].map((method) => (
-                  <Form.Item key={method.value} name={["depositPayments", method.value]} label={method.label}>
-                    <InputNumber min={0} precision={0} addonAfter="so‘m" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/\D/g, "")} />
-                  </Form.Item>
-                ))}
+              <div className="student-deposit-method-rows">
+                {[{ value: "cash", label: "Naqd" }, { value: "online", label: "Click" }, { value: "card", label: "Karta" }, { value: "bank", label: "Bank" }].map((method) => <div className="student-deposit-method-row" key={method.value}>
+                  <Form.Item name={["depositPayments", method.value]} label={method.label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/\D/g, "")} /></Form.Item>
+                  <Form.Item name={["depositPaymentDates", method.value]} label="To‘lov sanasi va vaqti" rules={Number(depositPayments[method.value] || 0) > 0 ? [{ required: true, message: `${method.label} sanasini tanlang` }] : []}><DatePicker disabled={Number(depositPayments[method.value] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
+                </div>)}
               </div>
-              <div className="student-deposit-payment-summary">To‘langan: <strong>{Number(Object.values(depositPayments).reduce((sum, value) => sum + (Number(value) || 0), 0)).toLocaleString("uz-UZ")} so‘m</strong></div>
-              {Number(depositPayments.online || 0) > 0 && <Form.Item name="depositOnlinePaidAt" label="Click to‘lovi qachon bo‘lgan?" rules={[{ required: true, message: "Click to‘lovi sanasini tanlang" }]}><DatePicker showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>}
+              {(() => { const paidTotal = Number(Object.values(depositPayments).reduce((sum, value) => sum + (Number(value) || 0), 0)); const remaining = Math.max(0, depositAmount - paidTotal); const invalid = paidTotal <= 0 || paidTotal > depositAmount; return <div className={`student-deposit-payment-summary ${invalid ? "mismatch" : "matched"}`}><span>Hozir to‘lanmoqda: <strong>{paidTotal.toLocaleString("uz-UZ")} so‘m</strong></span><span>Umumiy depozit: {depositAmount.toLocaleString("uz-UZ")} so‘m</span><span>Qoladigan qarz: {remaining.toLocaleString("uz-UZ")} so‘m</span></div> })()}
+              <Form.Item name="depositPaymentValidation" dependencies={["depositAmount", "depositPayments"]} rules={[{ validator: () => { const total = Object.values(form.getFieldValue("depositPayments") || {}).reduce((sum, value) => sum + (Number(value) || 0), 0); const maximum = Number(form.getFieldValue("depositAmount") || 0); if (total <= 0) return Promise.reject(new Error("Kamida bitta to‘lov usuliga summa kiriting")); return total <= maximum ? Promise.resolve() : Promise.reject(new Error("To‘langan depozit umumiy depozit summasidan oshmasligi kerak")); } }]}><Input type="hidden" /></Form.Item>
             </Form.Item>
           )}
           {depositType === "passport" && (

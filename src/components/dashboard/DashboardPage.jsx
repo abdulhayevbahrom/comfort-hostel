@@ -385,20 +385,12 @@ export function DashboardPage() {
           detail="Davr kirimi − xarajati"
         />
         <StatCard
-          tone="purple"
-          icon="income"
-          label="Jami kirim"
-          value={money(f.income)}
-          detail={`${rangeLabel} bo‘yicha ${f.incomeCount || 0} ta kirim`}
-          onClick={() => navigate("/payments")}
-        />
-        <StatCard
           tone="red"
-          icon="expense"
-          label="Jami xarajat"
-          value={money(f.expenses)}
-          detail={`${rangeLabel} bo‘yicha ${f.expenseCount || 0} ta xarajat`}
-          onClick={() => navigate("/expenses")}
+          icon="debt"
+          label="Depozit qarzdorligi"
+          value={money(d.depositAmount)}
+          detail={`${d.depositStudents || 0} ta talaba depozitni to‘liq qo‘ymagan`}
+          onClick={() => navigate("/debtors")}
         />
         <StatCard
           tone="orange"

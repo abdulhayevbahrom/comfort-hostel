@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { DatePicker, Input, Modal, Pagination, Select } from 'antd'
 import dayjs from 'dayjs'
 import { toast } from 'react-toastify'
+import { Link } from 'react-router-dom'
 import { apiErrorMessage, useGetAttendanceQuery, useGetRoomsQuery, useSaveAttendanceMutation } from '../../store/baseApi'
 import './Attendance.css'
 import './AttendanceDarkCards.css'
@@ -84,7 +85,7 @@ function AttendanceMarkingTab() {
       {isLoading ? <div className="attendance-state">Davomat yuklanmoqda…</div> : <div className={`attendance-table-wrap ${isFetching ? 'refreshing' : ''}`}><table className="attendance-table">
         <thead><tr><th>Talaba</th><th>Xona</th><th>Universitet</th><th>Davomat holati</th><th>Kirish</th><th>Chiqish</th><th>Belgilagan xodim</th><th>Izoh</th></tr></thead>
         <tbody>{(data?.rows || []).map((row) => { const draft = drafts[row.student.id] || {}; return <tr key={row.student.id} className={draft.dirty ? 'changed' : ''}>
-          <td data-label="Talaba"><div className="attendance-student">{row.student.photo ? <img src={row.student.photo.thumbnailUrl || row.student.photo.url} alt="" /> : <span>{row.student.fullName?.[0]}</span>}<div><strong>{row.student.fullName}</strong><small>{row.student.phone}</small></div></div></td>
+          <td data-label="Talaba"><div className="attendance-student">{row.student.photo ? <img src={row.student.photo.thumbnailUrl || row.student.photo.url} alt="" /> : <span>{row.student.fullName?.[0]}</span>}<div><Link to={`/student/${row.student.id}`}>{row.student.fullName}</Link><small>{row.student.phone}</small></div></div></td>
           <td data-label="Xona"><strong>{row.room.block} · {row.room.roomNumber}-xona</strong><small>{row.room.floor}-qavat</small></td>
           <td data-label="Universitet"><strong>{row.student.university?.shortName || row.student.university?.name || '—'}</strong><small>{row.student.course}-kurs · {row.student.faculty?.name || '—'}</small></td>
           <td data-label="Holat"><div className="attendance-statuses">{Object.entries(statuses).map(([value, item]) => <button key={value} title={item.label} className={`${value} ${draft.status === value ? 'active' : ''} ${draft.status && draft.status !== value ? 'muted' : ''}`} onClick={() => updateDraft(row.student.id, { status: value })}><b>{item.icon}</b><span>{item.label}</span></button>)}</div></td>

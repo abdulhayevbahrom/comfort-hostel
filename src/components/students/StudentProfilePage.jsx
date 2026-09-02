@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import {
   apiErrorMessage,
   useDeleteStudentMutation,
+  useGetGeneralSettingsQuery,
   useGetStudentQuery,
   useReturnStudentDepositMutation,
   useUpdateStudentMutation,
@@ -18,6 +19,8 @@ import "./StudentProfile.css";
 import "./StudentFines.css";
 import "./StudentFinesLayout.css";
 import { canEditOrDelete } from "../../utils/permissions";
+import { PaymentPrintIcon } from "../payments/PaymentReceiptModal";
+import { printDepositReceipt } from "../payments/depositReceipt";
 
 const genderLabel = { male: "O‘g‘il bola", female: "Qiz bola", family: "Oila", guest: "Mehmon" };
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
@@ -35,6 +38,7 @@ export function StudentProfilePage({ currentEmployee }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, error: queryError } = useGetStudentQuery(id);
+  const { data: settingsData } = useGetGeneralSettingsQuery();
   const [updateStudent, { isLoading: updating }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: deleting }] = useDeleteStudentMutation();
   const [returnDeposit, { isLoading: returningDeposit }] = useReturnStudentDepositMutation();
@@ -42,6 +46,9 @@ export function StudentProfilePage({ currentEmployee }) {
   const [formError, setFormError] = useState("");
   const student = data?.student;
   const canManage = canEditOrDelete(currentEmployee);
+  const depositPayments = student?.depositPayments?.length ? student.depositPayments : student?.depositType === "money" && student.depositAmount ? [{ id: `legacy-${student.id}`, amount: student.depositAmount, method: student.depositPaymentMethod || "cash", paidAt: student.depositReceivedAt }] : [];
+  const depositPaid = depositPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const printStudentDepositReceipt = () => printDepositReceipt(student, depositPayments, settingsData?.settings);
 
   const update = async ({ values, photoFiles, marriageCertificateFiles, removePhoto }) => {
     try {
@@ -194,10 +201,8 @@ export function StudentProfilePage({ currentEmployee }) {
                     <h3>Aloqa ma’lumotlari</h3>
                     <div className="student-profile-grid">
                       <ProfileItem label="Telefon" value={student.phone} />
-                      <ProfileItem
-                        label="Ota-onasi telefoni"
-                        value={student.parentPhone}
-                      />
+                      <ProfileItem label="Otasi (bobosi) telefoni" value={student.fatherPhone} />
+                      <ProfileItem label="Onasi (buvisi) telefoni" value={student.motherPhone} />
                       <ProfileItem label="Manzil" value={student.address} />
                     </div>
                   </div>
@@ -219,15 +224,18 @@ export function StudentProfilePage({ currentEmployee }) {
                       />}
                     </div>
                   </div>
-                  <div className="student-profile-section">
+                  <div className="student-profile-section student-deposit-section">
                     <h3>Depozit</h3>
-                    <div className="student-profile-grid">
+                    <div className="student-profile-grid student-deposit-grid">
                       <ProfileItem label="Depozit turi" value={student.depositType === "money" ? "Pul" : student.depositType === "passport" ? "Pasport" : "Depozit qo‘yilmagan"} />
-                      {student.depositType === "money" && <><ProfileItem label="Depozit summasi" value={money(student.depositAmount)} /><ProfileItem label="To‘lov turi" value={{ cash: "Naqd", online: "Click", card: "Terminal", bank: "Bank" }[student.depositPaymentMethod] || "—"} /></>}
+                      {student.depositType === "money" && <><ProfileItem label="Depozit summasi" value={money(student.depositAmount)} /><ProfileItem label="To‘langan" value={money(depositPaid)} /><ProfileItem label="Depozit qarzi" value={money(Math.max(0, Number(student.depositAmount || 0) - depositPaid))} /></>}
                       {student.depositType !== "none" && <ProfileItem label="Depozit olingan sana" value={student.depositReceivedAt ? new Date(student.depositReceivedAt).toLocaleDateString("uz-UZ") : "—"} />}
                       {student.depositReturnedAt && <ProfileItem label="Depozit qaytarilgan sana" value={new Date(student.depositReturnedAt).toLocaleDateString("uz-UZ")} />}
                     </div>
-                    {canManage && student.depositType !== "none" && !student.depositReturnedAt && <Popconfirm title="Depozit qaytarilsinmi?" description={student.depositType === "money" ? `${money(student.depositAmount)} qaytarilgan deb belgilanadi.` : "Pasport qaytarilgan deb belgilanadi."} okText="Qaytarish" cancelText="Bekor" onConfirm={returnStudentDeposit} okButtonProps={{ loading: returningDeposit }}><button className="student-profile-edit">Depozitni qaytarish</button></Popconfirm>}
+                    <div className="student-deposit-actions">
+                      {student.depositType === "money" && depositPayments.length > 0 && <div className="student-deposit-receipts"><button onClick={printStudentDepositReceipt}><PaymentPrintIcon /><span>Umumiy depozit cheki · {money(depositPaid)}</span></button></div>}
+                      {canManage && student.depositType !== "none" && !student.depositReturnedAt && <Popconfirm title="Depozit qaytarilsinmi?" description={student.depositType === "money" ? `${money(depositPaid)} qaytarilgan deb belgilanadi.` : "Pasport qaytarilgan deb belgilanadi."} okText="Qaytarish" cancelText="Bekor qilish" onConfirm={returnStudentDeposit} okButtonProps={{ loading: returningDeposit }}><button className="student-deposit-return">Depozitni qaytarish</button></Popconfirm>}
+                    </div>
                   </div>
                   <div className="student-profile-section">
                     <h3>Qo‘shimcha holatlar</h3>

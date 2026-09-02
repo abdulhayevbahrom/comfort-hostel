@@ -18,3 +18,14 @@
 @media(max-width:768px){.debtor-table td:nth-child(2)>strong,.debtor-table td:nth-child(2)>small,.debtor-table td:nth-child(3)>strong,.debtor-table td:nth-child(3)>small{text-align:right}}
 @media(max-width:768px){.debtor-table td:nth-child(2)>strong,.debtor-table td:nth-child(2)>small{line-height:1.05}.debtor-table td:nth-child(2)>small{margin-top:0}}
 .debtor-deadline-btn{padding:6px 9px;color:#9a5b12;background:#fff5dd;border:1px solid #ead7a5;border-radius:7px;font-size:11px;font-weight:700}.debtor-deadline-date{color:#a55a18!important;font-weight:700}.debtor-table tbody tr.debtor-deadline-reached td{background:#fff0f0!important;border-color:#efcccc}.debtor-table tbody tr.debtor-deadline-reached .debtor-student strong,.debtor-table tbody tr.debtor-deadline-reached .debt-money,.debtor-table tbody tr.debtor-deadline-reached .debtor-deadline-date{color:#c1363f!important}
+.debtor-deposit-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 10px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff3f0;
+  color: #a32d2d;
+}

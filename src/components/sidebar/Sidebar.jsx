@@ -2,6 +2,8 @@ import { SidebarIcon } from './SidebarIcon'
 import './Sidebar.css'
 
 export function Sidebar({ active, items, hostelName, logoUrl, onNavigate, onClose }) {
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   return (
     <aside className="edu-sidebar">
       <div className="edu-brand">
@@ -16,6 +18,10 @@ export function Sidebar({ active, items, hostelName, logoUrl, onNavigate, onClos
           </button>
         ))}
       </nav>
+      <div className="sidebar-today" aria-label={`Bugun: ${today}`}>
+        <span>Bugun</span>
+        <strong>{today}</strong>
+      </div>
     </aside>
   )
 }

@@ -8,6 +8,11 @@ export function RoomCard({ room, deleting, canManage, onResidents, onView, onEdi
   const availableCount = capacity - occupiedCount
   const displayedStatus = room.status === 'maintenance' ? optionLabel(statusOptions, room.status) : occupiedCount ? `${occupiedCount} ta band` : 'Bo‘sh'
   const displayedStatusClass = room.status === 'maintenance' ? room.status : occupiedCount ? 'occupied' : 'available'
+  const bedSlotLabel = (bed) => {
+    if (!bed.level) return bed.number
+    const position = bed.level === 'single' ? '1' : `2.${bed.level === 'lower' ? 1 : 2}`
+    return <>{bed.number} <small>[{position}]</small></>
+  }
 
   return (
     <article className={`room-card room-card-${room.status}`}>
@@ -20,10 +25,11 @@ export function RoomCard({ room, deleting, canManage, onResidents, onView, onEdi
         <div><span>Kategoriya:</span><strong>{optionLabel(categoryOptions, room.category)}</strong></div>
         <div><span>Kimlar uchun:</span><strong>{optionLabel(genderOptions, room.gender)}</strong></div>
         <div><span>Blok:</span><strong>{room.block || '—'}</strong></div>
+        <div><span>Sig‘imi:</span><strong>{capacity} o‘rin</strong></div>
       </div>
       <div className="room-seat-cards" aria-label={`${occupiedCount} ta band, ${availableCount} ta bo‘sh joy`}>
         {(room.beds || Array.from({ length: capacity }, (_, index) => ({ number: index + 1, status: index < occupiedCount ? 'occupied' : 'available' }))).map((bed) => (
-          <i key={bed.number} className={`room-bed-dot ${bed.status}`} title={`${bed.label || `${bed.number}-o‘rin`}: ${bed.status === 'occupied' ? 'band' : 'bo‘sh'}`}>{bed.number}</i>
+          <i key={bed.number} className={`room-bed-dot ${bed.status}`} title={`${bed.label || `${bed.number}-o‘rin`}: ${bed.status === 'occupied' ? 'band' : 'bo‘sh'}`}>{bedSlotLabel(bed)}</i>
         ))}
       </div>
       <div className="room-card-actions">

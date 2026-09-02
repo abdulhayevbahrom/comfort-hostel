@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Button, DatePicker, Form, Input, InputNumber, Modal, Segmented, Select } from 'antd'
 import dayjs from 'dayjs'
 import { calculateContractPayment } from '../../utils/contractPayment'
-import { bedLabel } from '../rooms/roomConstants'
 
 const createInitialValues = () => ({ contractNumber: `SHARTNOMA-${dayjs().format('YYYY-MM')}`, room: undefined, startDate: dayjs(), endDate: dayjs().add(1, 'month'), paymentType: 'monthly', paymentAmount: 0, status: 'active', note: '' })
 
@@ -16,7 +15,8 @@ function RoomPicker({ value, onChange, rooms, bedNumber, onBedChange, currentCon
     })}</div>
     {selectedRoom && <div className="contract-bed-picker"><span>Bo‘sh o‘rinni tanlang</span><div>{(selectedRoom.beds || Array.from({ length: selectedRoom.capacity }, (_, index) => ({ number: index + 1, status: 'available' }))).filter((bed) => bed.status !== 'occupied' || bed.contractId === currentContractId).map((bed) => {
       const occupiedByCurrentContract = bed.contractId === currentContractId
-      return <button type="button" key={bed.number} title={bed.label || bedLabel(bed.number)} className={`${bedNumber === bed.number ? 'selected ' : ''}${occupiedByCurrentContract ? 'selected' : 'available'}`} onClick={() => onBedChange(bed.number)}>{bed.number}</button>
+      const typeLabel = bed.level === 'single' ? '[1]' : bed.level === 'lower' ? '[2.1]' : bed.level === 'upper' ? '[2.2]' : ''
+      return <button type="button" key={bed.number} title={bed.label || `${bed.number}-o‘rin`} className={`${bedNumber === bed.number ? 'selected ' : ''}${occupiedByCurrentContract ? 'selected' : 'available'}`} onClick={() => onBedChange(bed.number)}>{bed.number}{typeLabel && <small>{typeLabel}</small>}</button>
     })}</div><small>Faqat bo‘sh o‘rinlar ko‘rsatilgan.</small></div>}
   </>
 }
@@ -48,7 +48,7 @@ export function ContractFormModal({ open, contract, rooms, loading, error, onClo
         <div className="contract-form-grid"><Form.Item name="startDate" label="Boshlanish sanasi" rules={[{ required: true, message: 'Sanani kiriting' }]}><DatePicker format="DD.MM.YYYY" placeholder="Sanani tanlang" style={{ width: '100%' }} /></Form.Item><Form.Item name="endDate" label="Tugash sanasi" dependencies={['startDate']} rules={[{ required: true, message: 'Sanani kiriting' }, ({ getFieldValue }) => ({ validator(_, value) { return !value || value.isAfter(getFieldValue('startDate'), 'day') ? Promise.resolve() : Promise.reject(new Error('Tugash sanasi keyin bo‘lishi kerak')) } })]}><DatePicker format="DD.MM.YYYY" placeholder="Sanani tanlang" style={{ width: '100%' }} /></Form.Item></div>
         <Form.Item name="paymentAmount" label={paymentType === 'daily' ? 'Bir kunlik to‘lov' : 'Bir oylik to‘lov'} rules={[{ required: true, type: 'number', min: 1, message: 'To‘lov summasi 0 dan katta bo‘lishi kerak' }]}><InputNumber min={1} precision={0} style={{ width: '100%' }} formatter={(value) => String(value || '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} parser={(value) => String(value || '').replace(/\D/g, '')} addonAfter="so‘m" /></Form.Item>
         <div className="contract-payment-calculation"><div><span>Shartnoma muddati</span><strong>{calculation.durationDays} kun</strong></div><div><span>Hisob birligi</span><strong>{paymentType === 'daily' ? `${calculation.billingQuantity} kun` : `${calculation.billingQuantity} oy`}</strong></div><div><span>Shartnoma qiymati</span><strong>{calculation.totalAmount.toLocaleString('uz-UZ')} so‘m</strong></div></div>
-        {paymentType === 'monthly' && calculation.billingQuantity > 0 && <div className="contract-payment-note">To‘lov {calculation.billingQuantity} oyga bo‘linadi. Har oy uchun {Number(paymentAmount || 0).toLocaleString('uz-UZ')} so‘mdan alohida hisob yuritiladi.</div>}
+        {paymentType === 'monthly' && calculation.billingQuantity > 0 && <div className="contract-payment-note">To‘lov kalendar oylar kesimida hisoblanadi. Boshlang‘ich yoki tugash oyi qisman bo‘lsa, o‘sha oy uchun kuniga mutanosib summa olinadi.</div>}
         {contract && <Form.Item name="status" label="Shartnoma holati"><Segmented className="contract-status-segmented" block options={[{ value: 'active', label: 'Aktiv' }, { value: 'cancelled', label: 'Bekor qilish' }]} /></Form.Item>}
         <Form.Item name="note" label="Izoh"><Input.TextArea rows={3} maxLength={1000} showCount placeholder="Shartnoma bo‘yicha izoh" /></Form.Item>
         {error && <div className="form-error">{error}</div>}

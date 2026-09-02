@@ -674,6 +674,11 @@ export const baseApi = createApi({
       transformResponse: (response) => response.data,
       invalidatesTags: [{ type: 'CashSession', id: 'LIST' }],
     }),
+    cancelCashSession: builder.mutation({
+      query: (id) => ({ url: `/cash-sessions/${id}/cancel`, method: 'PUT' }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: [{ type: 'CashSession', id: 'LIST' }, { type: 'Notification', id: 'LIST' }],
+    }),
     getFaceAccessEvents: builder.query({
       query: (params = {}) => ({ url: '/face-access/events', params }),
       transformResponse: (response) => response.data,
@@ -824,6 +829,7 @@ export const {
   useGetCashSessionsQuery,
   useCloseCashSessionMutation,
   useApproveCashSessionMutation,
+  useCancelCashSessionMutation,
   useGetFaceAccessEventsQuery,
   useGetFaceAccessStatesQuery,
   useGetStudentPresenceQuery,

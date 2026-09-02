@@ -251,6 +251,7 @@ function StudentsListTab({ currentEmployee }) {
                     <th>Telefon</th>
                     <th>Universitet</th>
                     <th>Kurs</th>
+                    <th>Xona</th>
                     <th>Nogironlik</th>
                     <th>Intizom</th>
                     <th>Amal</th>
@@ -259,6 +260,9 @@ function StudentsListTab({ currentEmployee }) {
                 <tbody>
                   {students.map((student) => {
                     const status = student.studentStatus || "green";
+                    const roomWithBeds = rooms.find((room) => room.id === student.activeRoom?.id);
+                    const assignedBed = roomWithBeds?.beds?.find((bed) => Number(bed.number) === Number(student.activeRoom?.bedNumber));
+                    const bedType = assignedBed?.level === "single" ? "[1]" : assignedBed?.level === "lower" ? "[2.1]" : assignedBed?.level === "upper" ? "[2.2]" : student.activeRoom?.bedType || "";
                     return (
                       <tr
                         key={student.id}
@@ -288,10 +292,13 @@ function StudentsListTab({ currentEmployee }) {
                           </div>
                         </td>
                         <td data-label="Holati">
-                          <span className={`student-status-badge ${status}`}>
-                            <i />
-                            {studentStatusLabel[status]}
-                          </span>
+                          <div className="student-status-cell">
+                            <span className={`student-status-badge ${status}`}>
+                              <i />
+                              {studentStatusLabel[status]}
+                            </span>
+                            {status === "red" && student.plannedDepartureDate && <small>{dayjs(student.plannedDepartureDate).format("DD.MM.YYYY")}</small>}
+                          </div>
                         </td>
                         <td data-label="Soliq shartnomasi">
                           <span
@@ -309,9 +316,7 @@ function StudentsListTab({ currentEmployee }) {
                         <td data-label="Telefon">
                           <div className="student-phone">
                             <strong>{student.phone}</strong>
-                            {student.parentPhone && (
-                              <small>{student.parentPhone}</small>
-                            )}
+                            {[student.fatherPhone, student.motherPhone].filter(Boolean).length > 0 && <small>{[student.fatherPhone, student.motherPhone].filter(Boolean).join(" · ")}</small>}
                           </div>
                         </td>
                         <td data-label="Universitet">
@@ -328,6 +333,14 @@ function StudentsListTab({ currentEmployee }) {
                           <span className="student-course">
                             {student.course}-kurs
                           </span>
+                        </td>
+                        <td data-label="Xona">
+                          {student.activeRoom ? (
+                            <div className="student-education">
+                              <strong>{student.activeRoom.block ? `${student.activeRoom.block} blok · ` : ""}{student.activeRoom.roomNumber}-xona</strong>
+                              <small>{student.activeRoom.floor}-qavat · {student.activeRoom.bedNumber} {bedType}</small>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td data-label="Nogironlik">
                           <span
@@ -396,7 +409,7 @@ function StudentsListTab({ currentEmployee }) {
                   })}
                   {!students.length && (
                     <tr>
-                      <td className="students-empty" colSpan={9}>
+                      <td className="students-empty" colSpan={10}>
                         Talabalar topilmadi
                       </td>
                     </tr>

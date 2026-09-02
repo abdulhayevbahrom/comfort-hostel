@@ -94,11 +94,12 @@
 .contract-bed-picker { display: grid; gap: 7px; margin: 10px 0 16px; padding: 10px; background: #f7fbfa; border: 1px solid #d6e8e4; border-radius: 9px; }
 .contract-bed-picker > span { color: #30545a; font-size: 12px; font-weight: 700; }
 .contract-bed-picker > div { display: flex; flex-wrap: wrap; gap: 6px; }
-.contract-bed-picker button { min-width: 34px; width: auto; height: 32px; padding: 0 9px; border-radius: 7px; font-size: 12px; font-weight: 800; }
+.contract-bed-picker button { display: grid; min-width: 42px; width: auto; height: 40px; place-items: center; padding: 3px 9px; border-radius: 7px; font-size: 14px; font-weight: 800; line-height: 1; }
+.contract-bed-picker button small { margin-top: 1px; color: inherit; font-size: 10px; font-weight: 800; }
 .contract-bed-picker button.available { color: #087f2a; background: #e4f8e9; border: 1px solid #9bdcb0; }
 .contract-bed-picker button.occupied { color: #b74a5e; background: #ffe5ea; border: 1px solid #efb4c0; cursor: not-allowed; }
 .contract-bed-picker button.selected { color: #fff; background: #159988; border-color: #0f766e; box-shadow: 0 3px 8px rgba(15,118,110,.2); }
-.contract-bed-picker small { color: #70878b; font-size: 10px; }
+.contract-bed-picker > small { color: #70878b; font-size: 10px; }
 .contract-status-segmented .ant-segmented-item-selected { color: #fff; background: #155e75; }
 .contract-form-actions { display: flex; gap: 8px; margin-top: 12px; }
 .contract-payment-calculation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; margin-bottom: 16px; background: #eef9f7; border: 1px solid #bce4df; border-radius: 10px; }
@@ -134,6 +135,14 @@
   .contract-a4, .contract-a4 * { visibility: visible !important; }
   .contract-a4 { display: block !important; width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0; color: #111 !important; background: #fff !important; box-shadow: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+.student-deposit-section { background: linear-gradient(180deg, #fff 0%, #fbfdfd 100%); }
+.student-deposit-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.student-deposit-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; margin-top: 14px; border-top: 1px solid #e2ebed; }
+.student-deposit-receipts { display: flex; flex: 1; flex-wrap: wrap; gap: 8px; margin: 0; }
+.student-deposit-receipts button { display: flex; min-height: 38px; align-items: center; gap: 7px; padding: 8px 12px; color: #155e75; background: #edf8f6; border: 1px solid #c8e3df; border-radius: 9px; font-weight: 700; }
+.student-deposit-receipts svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; }
+.student-deposit-return { min-height: 38px; padding: 0 16px; color: #fff; background: #159988; border: 1px solid #0f766e; border-radius: 9px; font-weight: 800; white-space: nowrap; }
+@media (max-width: 1200px) { .student-deposit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) {
   .student-profile-toolbar { align-items: stretch; }
   .student-profile-toolbar > div { margin-left: auto; }
@@ -150,6 +159,10 @@
   .student-profile-head > div:last-child { min-width: 0; }
   .student-profile-section { padding: 14px; }
   .student-profile-grid { grid-template-columns: 1fr; }
+  .student-deposit-grid { grid-template-columns: 1fr; }
+  .student-deposit-actions { align-items: stretch; flex-direction: column; }
+  .student-deposit-receipts, .student-deposit-receipts button, .student-deposit-return { width: 100%; }
+  .student-deposit-receipts button { justify-content: center; }
   .student-profile-grid { gap: 0; background: #f7fafb; border: 1px solid #e1eaec; border-radius: 9px; overflow: hidden; }
   .student-profile-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; background: transparent; border: 0; border-bottom: 1px solid #e1eaec; border-radius: 0; }
   .student-profile-item:last-child { border-bottom: 0; }

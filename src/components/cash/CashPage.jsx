@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Button, Form, Input, InputNumber, Modal } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { toast } from 'react-toastify'
-import { apiErrorMessage, useApproveCashSessionMutation, useCloseCashSessionMutation, useGetCashSessionsQuery } from '../../store/baseApi'
+import { apiErrorMessage, useApproveCashSessionMutation, useCancelCashSessionMutation, useCloseCashSessionMutation, useGetCashSessionsQuery } from '../../store/baseApi'
 import './Cash.css'
 import './CashNotes.css'
 
@@ -23,6 +23,7 @@ export function CashPage({ currentEmployee }) {
   const { data, isLoading, error } = useGetCashSessionsQuery(undefined, { skip: !isCashier && !canReview })
   const [closeCash, { isLoading: closing }] = useCloseCashSessionMutation()
   const [approveCash, { isLoading: approving }] = useApproveCashSessionMutation()
+  const [cancelCash, { isLoading: cancelling }] = useCancelCashSessionMutation()
 
   const submitClose = async (values) => {
     try {
@@ -44,6 +45,10 @@ export function CashPage({ currentEmployee }) {
       setSelected(null); approveForm.resetFields()
     } catch (requestError) { toast.error(apiErrorMessage(requestError)) }
   }
+  const cancelRequest = async (id) => {
+    try { await cancelCash(id).unwrap(); toast.success('Kassa topshirish so‘rovi bekor qilindi') }
+    catch (requestError) { toast.error(apiErrorMessage(requestError)) }
+  }
 
   if (!isCashier && !canReview) return <div className="cash-loading">Bu bo‘lim faqat kassir va owner uchun ochiq.</div>
   if (isLoading) return <div className="cash-loading">Kassa ma’lumotlari yuklanmoqda…</div>
@@ -56,7 +61,7 @@ export function CashPage({ currentEmployee }) {
         <article className="pending"><small>Tasdiqlanmagan summa</small><strong>{money(data?.pendingAmount)}</strong><span>Owner qabul qilishi kutilmoqda</span></article>
       </section>
       <section className="cash-card cash-close-card"><div><h2>Mablag‘ni ownerga topshirish</h2><p>Har safar bitta to‘lov turini to‘liq yoki qisman topshiring.</p></div><Button type="primary" disabled={!data?.open?.balance} onClick={() => { const firstMethod = methodKeys.find((key) => Number(data?.open?.breakdown?.[key] || 0) > 0) || 'cash'; setTransferMethod(firstMethod); closeForm.setFieldsValue({ amount: null, note: '' }); setCloseOpen(true) }}>Pul topshirish</Button></section>
-      <CashHistory sessions={data?.sessions || []} cashier={false} />
+      <CashHistory sessions={data?.sessions || []} cashier={false} onCancel={cancelRequest} cancelling={cancelling} />
     </> : <>
       <section className="cash-summary">
         <article><small>Markaziy kassada</small><strong>{money(data?.summary?.centralCash)}</strong><Breakdown breakdown={data?.summary?.breakdown} /></article>
@@ -64,7 +69,7 @@ export function CashPage({ currentEmployee }) {
         <article><small>Kassirlar qo‘lida</small><strong>{money(data?.summary?.cashierAmount)}</strong><span>Hali topshirilmagan mablag‘</span></article>
       </section>
       <section className="cash-card"><div className="cash-card-title"><h2>Kassirlardagi qoldiq</h2><p>Naqd va shaxsiy hisobga tushgan mablag‘lar.</p></div><CashierBalances rows={data?.cashierBalances || []} /></section>
-      <section className="cash-card"><div className="cash-card-title"><h2>Tasdiqlash kutilayotgan kassalar</h2><p>Pulni sanang va haqiqiy summani kiriting.</p></div><CashTable sessions={data?.pendingSessions || []} onApprove={openApprove} /></section>
+      <section className="cash-card"><div className="cash-card-title"><h2>Tasdiqlash kutilayotgan kassalar</h2><p>Pulni sanang va haqiqiy summani kiriting.</p></div><CashTable sessions={data?.pendingSessions || []} onApprove={openApprove} onCancel={cancelRequest} cancelling={cancelling} /></section>
       <CashHistory sessions={data?.recentSessions || []} cashier />
     </>}
 
@@ -99,10 +104,14 @@ function CashierBalances({ rows }) {
   return <div className="cash-table-wrap"><table><thead><tr><th>Kassir</th><th>Jami qoldiq</th><th>Tarkibi</th></tr></thead><tbody>{rows.map((row) => <tr key={row.sessionId}><td data-label="Kassir"><strong>{fullName(row.cashier)}</strong><small>{row.cashier?.position}</small></td><td data-label="Jami"><b>{money(row.balance)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={row.breakdown} /></td></tr>)}{!rows.length && <tr><td colSpan={3} className="cash-empty">Kassirlarda qoldiq yo‘q</td></tr>}</tbody></table></div>
 }
 
-function CashTable({ sessions, onApprove }) {
-  return <div className="cash-table-wrap"><table><thead><tr><th>Kassir</th><th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>Kassir izohi</th><th>Amal</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td data-label="Kassir"><strong>{fullName(session.cashier)}</strong><small>{session.cashier?.position}</small></td><td data-label="Vaqt">{dayjs(session.closedAt).format('DD.MM.YYYY HH:mm')}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Amal"><Button size="small" type="primary" onClick={() => onApprove(session)}>Pulni qabul qilish</Button></td></tr>)}{!sessions.length && <tr><td colSpan={6} className="cash-empty">Tasdiqlash kutilayotgan mablag‘ yo‘q</td></tr>}</tbody></table></div>
+function CancelRequestButton({ onConfirm, loading }) {
+  return <Popconfirm title="Kassa topshirish so‘rovini bekor qilish" description="Mablag‘ kassir qoldig‘iga qaytariladi." okText="Bekor qilish" cancelText="Yopish" okButtonProps={{ danger: true, loading }} onConfirm={onConfirm}><Button size="small" danger>Bekor qilish</Button></Popconfirm>
 }
 
-function CashHistory({ sessions, cashier }) {
-  return <section className="cash-card"><div className="cash-card-title"><h2>Kassa tarixi</h2><p>Topshirilgan va qabul qilingan mablag‘lar</p></div><div className="cash-table-wrap"><table><thead><tr>{cashier && <th>Kassir</th>}<th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>Kassir izohi</th><th>Admin izohi</th><th>Holat</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}>{cashier && <td data-label="Kassir">{fullName(session.cashier)}</td>}<td data-label="Vaqt">{session.closedAt ? dayjs(session.closedAt).format('DD.MM.YYYY HH:mm') : '—'}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Admin izohi"><span className="cash-note">{session.reviewNote || '—'}</span></td><td data-label="Holat"><span className={`cash-status ${session.status}`}>{session.status === 'approved' ? 'Qabul qilingan' : session.status === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}</span></td></tr>)}{!sessions.length && <tr><td colSpan={cashier ? 7 : 6} className="cash-empty">Kassa tarixi hali yo‘q</td></tr>}</tbody></table></div></section>
+function CashTable({ sessions, onApprove, onCancel, cancelling }) {
+  return <div className="cash-table-wrap"><table><thead><tr><th>Kassir</th><th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>Kassir izohi</th><th>Amal</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td data-label="Kassir"><strong>{fullName(session.cashier)}</strong><small>{session.cashier?.position}</small></td><td data-label="Vaqt">{dayjs(session.closedAt).format('DD.MM.YYYY HH:mm')}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Amal"><div className="cash-actions"><Button size="small" type="primary" onClick={() => onApprove(session)}>Pulni qabul qilish</Button><CancelRequestButton onConfirm={() => onCancel(session.id)} loading={cancelling} /></div></td></tr>)}{!sessions.length && <tr><td colSpan={6} className="cash-empty">Tasdiqlash kutilayotgan mablag‘ yo‘q</td></tr>}</tbody></table></div>
+}
+
+function CashHistory({ sessions, cashier, onCancel, cancelling }) {
+  return <section className="cash-card"><div className="cash-card-title"><h2>Kassa tarixi</h2><p>Topshirilgan va qabul qilingan mablag‘lar</p></div><div className="cash-table-wrap"><table><thead><tr>{cashier && <th>Kassir</th>}<th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>Kassir izohi</th><th>Admin izohi</th><th>Holat</th>{onCancel && <th>Amal</th>}</tr></thead><tbody>{sessions.map((session) => <tr key={session.id}>{cashier && <td data-label="Kassir">{fullName(session.cashier)}</td>}<td data-label="Vaqt">{session.closedAt ? dayjs(session.closedAt).format('DD.MM.YYYY HH:mm') : '—'}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Admin izohi"><span className="cash-note">{session.reviewNote || '—'}</span></td><td data-label="Holat"><span className={`cash-status ${session.status}`}>{session.status === 'approved' ? 'Qabul qilingan' : session.status === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}</span></td>{onCancel && <td data-label="Amal">{session.status === 'pending' && <CancelRequestButton onConfirm={() => onCancel(session.id)} loading={cancelling} />}</td>}</tr>)}{!sessions.length && <tr><td colSpan={cashier ? 8 : 7} className="cash-empty">Kassa tarixi hali yo‘q</td></tr>}</tbody></table></div></section>
 }

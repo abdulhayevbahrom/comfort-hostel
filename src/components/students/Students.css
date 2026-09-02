@@ -40,6 +40,8 @@
 .student-status-badge.warning i { background: #e29a16; }
 .student-status-badge.red { color: #a9232e; background: #ffe3e5; }
 .student-status-badge.red i { background: #d93645; }
+.student-status-cell { display: grid; gap: 4px; justify-items: start; }
+.student-status-cell small { color: #a9232e; font-size: 10px; font-weight: 700; }
 .student-tax-contract { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid; border-radius: 6px; font-size: 16px; font-weight: 900; line-height: 1; }
 .student-tax-contract.checked { color: #137a50; background: #e5f7ed; border-color: #a9dcc1; }
 .student-tax-contract.unchecked { color: #a44249; background: #fff1f2; border-color: #efbdc1; }
@@ -77,6 +79,7 @@
 .student-deposit-details { grid-column: 1 / -1; }
 .student-deposit-fields { display: flex; gap: 12px; }
 .student-deposit-fields > * { width: 50% !important; min-width: 0; flex: 1 1 0; }
+.student-deposit-payment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}.student-deposit-payment-grid .ant-input-number{width:100%}.student-deposit-payment-summary{padding:9px 11px;margin-bottom:10px;color:#60777e;background:#edf8f6;border-radius:8px}.student-deposit-payment-summary strong{color:#0f766e}
 .student-state-segmented { height: 38px; min-height: 38px; box-sizing: border-box; padding: 3px; }
 .student-state-segmented .ant-segmented-item { display: grid; min-height: 32px; place-items: center; }
 .student-state-segmented .ant-segmented-item-selected { color: #fff; background: #155e75; box-shadow: 0 3px 9px rgba(21, 94, 117, .22); }

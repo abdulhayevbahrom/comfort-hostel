@@ -24,11 +24,14 @@ const initialValues = {
   faceIdCode: "",
   phone: "",
   gender: "female",
-  parentPhone: "",
+  fatherPhone: "",
+  motherPhone: "",
   depositType: "none",
   depositAmount: null,
   depositPaymentMethod: undefined,
   depositReceivedAt: null,
+  depositPayments: { cash: 0, online: 0, card: 0, bank: 0 },
+  depositOnlinePaidAt: null,
   university: undefined,
   faculty: undefined,
   address: "",
@@ -37,6 +40,7 @@ const initialValues = {
   hasTemporaryRegistration: false,
   temporaryRegistrationMonths: null,
   studentStatus: "green",
+  plannedDepartureDate: null,
   hasTaxContract: false,
   taxContractType: "student_contract",
   disciplinaryStatus: "clear",
@@ -73,7 +77,9 @@ export function StudentFormModal({
   );
   const hasTaxContract = Form.useWatch("hasTaxContract", form);
   const depositType = Form.useWatch("depositType", form);
+  const depositPayments = Form.useWatch("depositPayments", form) || {};
   const gender = Form.useWatch("gender", form);
+  const studentStatus = Form.useWatch("studentStatus", form);
   const universities = universityData?.universities || [];
   const selectedUniversity = universities.find(
     (item) =>
@@ -96,6 +102,7 @@ export function StudentFormModal({
             temporaryRegistrationMonths:
               student.temporaryRegistrationMonths || null,
             studentStatus: student.studentStatus || "green",
+            plannedDepartureDate: student.plannedDepartureDate ? dayjs(student.plannedDepartureDate) : null,
             hasTaxContract: Boolean(student.hasTaxContract),
             taxContractType: student.hasTaxContract
               ? student.taxContractType || "student_contract"
@@ -112,6 +119,12 @@ export function StudentFormModal({
             depositReceivedAt: student.depositReceivedAt
               ? dayjs(student.depositReceivedAt)
               : null,
+            depositPayments: student.depositPayments?.length
+              ? Object.fromEntries(["cash", "online", "card", "bank"].map((method) => [method, student.depositPayments.filter((payment) => payment.method === method).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)]))
+              : { cash: student.depositPaymentMethod === "cash" ? Number(student.depositAmount || 0) : 0, online: student.depositPaymentMethod === "online" ? Number(student.depositAmount || 0) : 0, card: student.depositPaymentMethod === "card" ? Number(student.depositAmount || 0) : 0, bank: student.depositPaymentMethod === "bank" ? Number(student.depositAmount || 0) : 0 },
+            depositOnlinePaidAt: student.depositPayments?.find((payment) => payment.method === "online")?.paidAt
+              ? dayjs(student.depositPayments.find((payment) => payment.method === "online").paidAt)
+              : student.depositPaymentMethod === "online" && student.depositReceivedAt ? dayjs(student.depositReceivedAt) : null,
           }
         : initialValues,
     );
@@ -215,11 +228,15 @@ export function StudentFormModal({
             !form.getFieldValue("depositReceivedAt")
           )
             form.setFieldValue("depositReceivedAt", dayjs());
+          if (changed.depositType === "money" && !form.getFieldValue("depositAmount"))
+            form.setFieldValue("depositAmount", 700000);
           if (changed.depositType === "none")
             form.setFieldsValue({
               depositAmount: null,
               depositPaymentMethod: undefined,
               depositReceivedAt: null,
+              depositPayments: { cash: 0, online: 0, card: 0, bank: 0 },
+              depositOnlinePaidAt: null,
             });
           if (changed.depositType === "passport")
             form.setFieldValue("depositPaymentMethod", undefined);
@@ -306,13 +323,14 @@ export function StudentFormModal({
               </Form.Item>
             </>
           )}
-          <Form.Item
-            name="parentPhone"
-            label="Ota-onasi telefoni"
-            rules={[{ pattern: /^\d{9}$/, message: "Masalan: 939119572" }]}
-          >
-            <Input maxLength={9} inputMode="numeric" placeholder="939119572" />
-          </Form.Item>
+          {[
+            ["fatherPhone", "Otasi (bobosi) telefoni"],
+            ["motherPhone", "Onasi (buvisi) telefoni"],
+          ].map(([name, label]) => (
+            <Form.Item key={name} name={name} label={label} rules={[{ pattern: /^\d{9}$/, message: "Masalan: 939119572" }]}>
+              <Input maxLength={9} inputMode="numeric" placeholder="939119572" />
+            </Form.Item>
+          ))}
           <Form.Item name="depositType" label="Depozit turi">
             <Segmented
               className="student-deposit-segmented"
@@ -359,21 +377,16 @@ export function StudentFormModal({
             </Form.Item>
           )}
           {depositType === "money" && (
-            <Form.Item
-              name="depositPaymentMethod"
-              label="Depozit to‘lov turi"
-              rules={[{ required: true, message: "To‘lov turini tanlang" }]}
-            >
-              <Segmented
-                className="student-deposit-segmented"
-                block
-                options={[
-                  { value: "cash", label: "Naqd" },
-                  { value: "online", label: "Click" },
-                  { value: "card", label: "Terminal" },
-                  { value: "bank", label: "Bank" },
-                ]}
-              />
+            <Form.Item className="student-deposit-details" label="To‘langan depozit — usullar bo‘yicha">
+              <div className="student-deposit-payment-grid">
+                {[{ value: "cash", label: "Naqd" }, { value: "online", label: "Click" }, { value: "card", label: "Karta" }, { value: "bank", label: "Bank" }].map((method) => (
+                  <Form.Item key={method.value} name={["depositPayments", method.value]} label={method.label}>
+                    <InputNumber min={0} precision={0} addonAfter="so‘m" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/\D/g, "")} />
+                  </Form.Item>
+                ))}
+              </div>
+              <div className="student-deposit-payment-summary">To‘langan: <strong>{Number(Object.values(depositPayments).reduce((sum, value) => sum + (Number(value) || 0), 0)).toLocaleString("uz-UZ")} so‘m</strong></div>
+              {Number(depositPayments.online || 0) > 0 && <Form.Item name="depositOnlinePaidAt" label="Click to‘lovi qachon bo‘lgan?" rules={[{ required: true, message: "Click to‘lovi sanasini tanlang" }]}><DatePicker showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>}
             </Form.Item>
           )}
           {depositType === "passport" && (
@@ -527,6 +540,15 @@ export function StudentFormModal({
               ]}
             />
           </Form.Item>
+          {studentStatus === "red" && (
+            <Form.Item
+              name="plannedDepartureDate"
+              label="Ketish sanasi"
+              rules={[{ required: true, message: "Ketish sanasini tanlang" }]}
+            >
+              <DatePicker format="DD.MM.YYYY" placeholder="Ketish sanasini tanlang" style={{ width: "100%" }} />
+            </Form.Item>
+          )}
           <div className="student-inline-dependent-field student-inline-tax-field">
             <label>Soliq tizimidagi shartnoma</label>
             <div>

@@ -51,7 +51,7 @@ export function DebtorsPage({ currentEmployee }) {
     const needle = query.trim().toLowerCase();
     return (data?.debtors || []).filter((item) => {
       const searchable =
-        `${item.student?.fullName || ""} ${item.student?.phone || ""} ${item.student?.parentPhone || ""} ${item.contracts?.map((contract) => contract.contractNumber).join(" ") || ""} ${item.contracts?.map((contract) => `${contract.room?.block || ""} ${contract.room?.roomNumber || ""}`).join(" ") || ""}`.toLowerCase();
+        `${item.student?.fullName || ""} ${item.student?.phone || ""} ${item.student?.fatherPhone || ""} ${item.student?.motherPhone || ""} ${item.contracts?.map((contract) => contract.contractNumber).join(" ") || ""} ${item.contracts?.map((contract) => `${contract.room?.block || ""} ${contract.room?.roomNumber || ""}`).join(" ") || ""}`.toLowerCase();
       const statusMatch =
         status === "all" ||
         (status === "overdue"
@@ -141,11 +141,11 @@ export function DebtorsPage({ currentEmployee }) {
       </section>
       <section className="debtor-stats">
         <article className="count">
-          <small>Oy uchun hisoblangan</small>
+          <small>Hisoblangan (shartnoma + depozit)</small>
           <strong>{money(summary.scheduledAmount)}</strong>
         </article>
         <article className="partial">
-          <small>To‘langan summa</small>
+          <small>To‘langan (shartnoma + depozit)</small>
           <strong>{money(summary.paidAmount)}</strong>
         </article>
         <article className="total">
@@ -164,9 +164,9 @@ export function DebtorsPage({ currentEmployee }) {
         </article>
         <article className="unpaid">
           <small>
-            {data?.isFuturePeriod ? "To‘lov kutilmoqda" : "To‘lov qilmagan"}
+            {data?.isFuturePeriod ? "To‘lov kutilayotgan talabalar" : "Qarzdor talabalar"}
           </small>
-          <strong>{summary.noPaymentStudentCount || 0} ta</strong>
+          <strong>{data?.isFuturePeriod ? summary.waitingCount || 0 : summary.debtorCount || 0} ta</strong>
         </article>
       </section>
       <section className="debtors-card">
@@ -234,6 +234,7 @@ export function DebtorsPage({ currentEmployee }) {
                       <td data-label="Talaba">
                         <button
                           className="debtor-student"
+                          title="Talaba profilini ochish"
                           onClick={() =>
                             navigate(`/student/${debtor.student.id}`)
                           }
@@ -278,13 +279,14 @@ export function DebtorsPage({ currentEmployee }) {
                       </td>
                       <td data-label="Davrlar">
                         <span className="debt-period-count">
-                          {debtor.periodCount} ta davr
+                          {debtor.depositDebt ? "Depozit" : `${debtor.periodCount} ta davr`}
                         </span>
                         <small>
                           {debtor.periods
                             .map((paymentPeriod) => paymentPeriod.periodKey)
                             .join(", ")}
                         </small>
+                        {debtor.depositDebt > 0 && <small>Depozit qarzi: {money(debtor.depositDebt)}</small>}
                         {debtor.paymentDeadline && <small className="debtor-deadline-date">Deadline: {dayjs(debtor.paymentDeadline).format("DD.MM.YYYY")}</small>}
                       </td>
                       <td data-label="Summa">
@@ -301,9 +303,9 @@ export function DebtorsPage({ currentEmployee }) {
                         <div className="debtor-row-actions">
                           <button
                             className="debtor-pay-btn"
-                            onClick={() => openPayment(debtor)}
+                            onClick={() => debtor.periods.length ? openPayment(debtor) : navigate(`/student/${debtor.student.id}`)}
                           >
-                            To‘lov qilish
+                            {debtor.periods.length ? "To‘lov qilish" : "Profilga o‘tish"}
                           </button>
                           <button
                             className="debtor-history-btn"
@@ -322,10 +324,10 @@ export function DebtorsPage({ currentEmployee }) {
                           >
                             Batafsil
                           </button>
-                          {isOwner && <button className="debtor-deadline-btn" onClick={() => openDeadline(debtor)}>Deadline</button>}
+                          {isOwner && debtor.periods.length > 0 && <button className="debtor-deadline-btn" onClick={() => openDeadline(debtor)}>Deadline</button>}
                           {isOwner && <button className="debtor-history-btn" disabled={sendingSms || debtor.smsSentCount >= 3} onClick={() => sendSms(debtor)} title={debtor.smsSentCount >= 3 ? 'SMS limiti tugagan' : 'Qarzdorlik SMSini yuborish'}>SMS ({debtor.smsSentCount || 0}/3)</button>}
                           <button className="debtor-more-btn" aria-label="Amallar" onClick={() => setActionDebtor(actionDebtor?.student?.id === debtor.student.id ? null : debtor)}>⋯</button>
-                          {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions"><button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button><button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
+                          {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions">{debtor.periods.length > 0 && <button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button>}<button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && debtor.periods.length > 0 && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
                         </div>
                       </td>
                     </tr>
@@ -367,8 +369,8 @@ export function DebtorsPage({ currentEmployee }) {
                   <a href={`tel:${selected.student.phone}`}>
                     {selected.student.phone}
                   </a>
-                  <a href={`tel:${selected.student.parentPhone}`}>
-                    {selected.student.parentPhone || "Ota-ona telefoni yo‘q"}
+                  <a href={`tel:${selected.student.fatherPhone || selected.student.motherPhone || ""}`}>
+                    {selected.student.fatherPhone || selected.student.motherPhone || "Qo‘shimcha aloqa raqami yo‘q"}
                   </a>
                 </div>
               </div>
@@ -387,6 +389,7 @@ export function DebtorsPage({ currentEmployee }) {
                 </div>
               </div>
               <h4>{data?.isFuturePeriod ? "Kelgusi to‘lov davrlari" : "Qarzdorlik davrlari"}</h4>
+              {selected.depositDebt > 0 && <div className="debtor-deposit-detail"><strong>Depozit qarzi</strong><b>{money(selected.depositDebt)}</b></div>}
               <div className="debtor-periods">
                 {selected.periods.map((period) => (
                   <article key={period.id}>

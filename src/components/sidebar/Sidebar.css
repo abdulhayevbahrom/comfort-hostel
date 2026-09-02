@@ -1,6 +1,8 @@
 .edu-sidebar {
   position: relative;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   height: 100dvh;
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -73,6 +75,18 @@
   display: grid;
   padding: clamp(4px, 0.5vw, 8px);
 }
+.sidebar-today {
+  display: grid;
+  gap: 3px;
+  margin: auto 10px 10px;
+  padding: 10px 12px;
+  color: #c3cedb;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 9px;
+}
+.sidebar-today span { color: #9fb0c2; font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.sidebar-today strong { color: #f4f8fb; font-size: 12px; font-weight: 700; }
 .edu-sidebar nav button {
   display: flex;
   height: clamp(40px, 2.15vw, 46px);

@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 import { apiErrorMessage, useCreateRoomMutation, useDeleteRoomMutation, useGetRoomsQuery, useGetRoomStudentsQuery, useUpdateRoomMutation } from '../../store/baseApi'
 import { RoomCard } from './RoomCard'
 import { RoomFormModal } from './RoomFormModal'
-import { bedLabel, categoryOptions, genderOptions, statusOptions } from './roomConstants'
+import { categoryOptions, genderOptions, statusOptions } from './roomConstants'
 import './Rooms.css'
 import { canEditOrDelete } from '../../utils/permissions'
 
@@ -36,6 +36,21 @@ export function RoomsPage({ currentEmployee }) {
     const text = query.trim().toLowerCase()
     return (!text || [room.roomNumber, room.block, room.category].some((value) => String(value).toLowerCase().includes(text))) && (!floor || room.floor === floor) && (!category || room.category === category) && (!gender || room.gender === gender) && (!status || room.status === status)
   }), [rooms, query, floor, category, gender, status])
+  const roomsByFloor = useMemo(() => {
+    const groupedRooms = new Map()
+    filtered.forEach((room) => {
+      const floorValue = String(room.floor)
+      if (!groupedRooms.has(floorValue)) groupedRooms.set(floorValue, [])
+      groupedRooms.get(floorValue).push(room)
+    })
+    return [...groupedRooms.entries()].sort(([firstFloor], [secondFloor]) => firstFloor.localeCompare(secondFloor, undefined, { numeric: true }))
+  }, [filtered])
+  const residentBedLabel = (bedNumber) => {
+    const bed = residentsRoom?.beds?.find((item) => Number(item.number) === Number(bedNumber))
+    if (!bed?.level) return `${bedNumber}-o‘rin`
+    const typeLabel = bed.level === 'single' ? '[1]' : bed.level === 'lower' ? '[2.1]' : '[2.2]'
+    return <>{bedNumber} <small className="room-resident-bed-type">{typeLabel}</small></>
+  }
 
   const closeModal = () => { setModalOpen(false); setEditingRoom(null); setError('') }
   const submit = async ({ values, newImages, existingImages }) => {
@@ -77,7 +92,7 @@ export function RoomsPage({ currentEmployee }) {
           </div>
         </div>
         {listError && <div className="form-error">{apiErrorMessage(listError)}</div>}
-        {isLoading ? <div className="rooms-loading">Xonalar yuklanmoqda…</div> : <div className="rooms-grid">{filtered.map((room) => <RoomCard key={room.id} room={room} deleting={deleting} canManage={canEditOrDelete(currentEmployee)} onResidents={setResidentsRoom} onView={setGalleryRoom} onEdit={(item) => { setEditingRoom(item); setModalOpen(true) }} onDelete={remove} />)}{!filtered.length && <div className="rooms-empty">Xonalar topilmadi</div>}</div>}
+        {isLoading ? <div className="rooms-loading">Xonalar yuklanmoqda…</div> : <div className="rooms-grid">{roomsByFloor.map(([floorValue, floorRooms]) => <section className="rooms-floor-group" key={floorValue} aria-labelledby={`floor-${floorValue}-title`}><div className="rooms-floor-heading"><h2 id={`floor-${floorValue}-title`}>{floorValue}-qavat</h2><span aria-hidden="true" /></div><div className="rooms-floor-grid">{floorRooms.map((room) => <RoomCard key={room.id} room={room} deleting={deleting} canManage={canEditOrDelete(currentEmployee)} onResidents={setResidentsRoom} onView={setGalleryRoom} onEdit={(item) => { setEditingRoom(item); setModalOpen(true) }} onDelete={remove} />)}</div></section>)}{!filtered.length && <div className="rooms-empty">Xonalar topilmadi</div>}</div>}
       </div>
       <RoomFormModal open={modalOpen} room={editingRoom} loading={creating || updating} error={error} onClose={closeModal} onSubmit={submit} />
       <Modal open={filtersOpen} onCancel={() => setFiltersOpen(false)} footer={null} title="Filterlar" destroyOnHidden rootClassName="room-filters-modal">
@@ -94,7 +109,7 @@ export function RoomsPage({ currentEmployee }) {
       </Modal>
       <Modal open={Boolean(residentsRoom)} onCancel={() => setResidentsRoom(null)} footer={null} width={820} title={residentsRoom ? `Xona ${residentsRoom.roomNumber} — biriktirilgan talabalar` : ''} rootClassName="room-residents-modal">
         {residentsError && <div className="form-error">{apiErrorMessage(residentsError)}</div>}
-        {residentsLoading ? <div className="room-residents-state">Talabalar yuklanmoqda…</div> : <div className="room-residents-table-wrap"><table className="room-residents-table"><thead><tr><th>O‘rin</th><th>Talaba</th><th>Shartnoma</th><th>Muddati</th></tr></thead><tbody>{(residentsData?.students || []).map(({ student, contract }) => <tr key={contract.id}><td data-label="O‘rin"><strong>{bedLabel(contract.bedNumber)}</strong></td><td data-label="Talaba"><button className="room-resident-person" onClick={() => navigate(`/student/${student.id}`)} title="Talaba profilini ochish">{student.photo ? <img src={student.photo.thumbnailUrl || student.photo.url} alt="" /> : <span>{student.fullName?.[0]}</span>}<div><strong>{student.fullName}</strong><small>{student.phone}</small></div></button></td><td data-label="Shartnoma"><strong>{contract.contractNumber}</strong></td><td data-label="Muddati">{dayjs(contract.startDate).format('DD.MM.YYYY')}<small>{dayjs(contract.endDate).format('DD.MM.YYYY')} gacha</small></td></tr>)}{!residentsData?.students?.length && <tr><td colSpan="4" className="room-residents-state">Bu xonaga hali talaba biriktirilmagan</td></tr>}</tbody></table></div>}
+        {residentsLoading ? <div className="room-residents-state">Talabalar yuklanmoqda…</div> : <div className="room-residents-table-wrap"><table className="room-residents-table"><thead><tr><th>O‘rin</th><th>Talaba</th><th>Shartnoma</th><th>Muddati</th></tr></thead><tbody>{(residentsData?.students || []).map(({ student, contract }) => <tr key={contract.id}><td data-label="O‘rin"><strong>{residentBedLabel(contract.bedNumber)}</strong></td><td data-label="Talaba"><button className="room-resident-person" onClick={() => navigate(`/student/${student.id}`)} title="Talaba profilini ochish">{student.photo ? <img src={student.photo.thumbnailUrl || student.photo.url} alt="" /> : <span>{student.fullName?.[0]}</span>}<div><strong>{student.fullName}</strong><small>{student.phone}</small></div></button></td><td data-label="Shartnoma"><strong>{contract.contractNumber}</strong></td><td data-label="Muddati">{dayjs(contract.startDate).format('DD.MM.YYYY')}<small>{dayjs(contract.endDate).format('DD.MM.YYYY')} gacha</small></td></tr>)}{!residentsData?.students?.length && <tr><td colSpan="4" className="room-residents-state">Bu xonaga hali talaba biriktirilmagan</td></tr>}</tbody></table></div>}
       </Modal>
     </div>
   )

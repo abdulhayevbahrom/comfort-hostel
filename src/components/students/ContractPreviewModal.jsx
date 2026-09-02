@@ -148,7 +148,7 @@ export const ContractDocument = forwardRef(function ContractDocument(
               yotoqxonaning ichki tartib-qoidalari bilan tanishganimni
               tasdiqlayman.
             </p>
-            <p>Tel: {student.parentPhone || "__________________"}</p>
+            <p>Tel: {student.fatherPhone || student.motherPhone || "__________________"}</p>
             <p>Sana: __________________</p>
             <span>Imzo: __________________</span>
           </div>

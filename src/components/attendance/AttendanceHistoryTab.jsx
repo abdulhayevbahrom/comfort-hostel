@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DatePicker, Pagination, Select } from 'antd'
 import dayjs from 'dayjs'
+import { Link } from 'react-router-dom'
 import { apiErrorMessage, useGetAttendanceHistoryListQuery, useGetRoomsQuery } from '../../store/baseApi'
 import './AttendanceHistory.css'
 
@@ -42,7 +43,7 @@ export function AttendanceHistoryTab() {
       {isLoading ? <div className="attendance-state">Davomat tarixi yuklanmoqda…</div> : <div className={`history-matrix-wrap ${isFetching ? 'refreshing' : ''}`}><table className="history-matrix">
         <thead><tr><th className="student-col">Talaba</th><th className="room-col">Xona</th>{days.map((day) => <th key={day.format('DD')}><b>{day.format('D')}</b><small>{day.format('dd')}</small></th>)}<th className="count present">Keldi</th><th className="count absent">Kelmadi</th><th className="count late">Kech</th></tr></thead>
         <tbody>{(data?.rows || []).map((row) => { const byDate = new Map(row.records.map((item) => [item.attendanceDate, item])); const counts = { present: 0, absent: 0, late: 0 }; row.records.forEach((item) => { counts[item.status] += 1 }); return <tr key={row.student.id}>
-          <td className="student-col"><div className="history-student">{row.student.photo ? <img src={row.student.photo.thumbnailUrl || row.student.photo.url} alt="" /> : <span>{row.student.fullName?.[0]}</span>}<div><strong>{row.student.fullName}</strong><small>{row.student.phone}</small></div></div></td>
+          <td className="student-col"><div className="history-student">{row.student.photo ? <img src={row.student.photo.thumbnailUrl || row.student.photo.url} alt="" /> : <span>{row.student.fullName?.[0]}</span>}<div><Link to={`/student/${row.student.id}`}>{row.student.fullName}</Link><small>{row.student.phone}</small></div></div></td>
           <td className="room-col"><strong>{row.room.block} · {row.room.roomNumber}</strong><small>{row.student.university?.shortName || row.student.university?.name || '—'}</small></td>
           {days.map((day) => { const record = byDate.get(day.format('YYYY-MM-DD')); const meta = statusMeta[record?.status]; return <td key={day.format('DD')} className={`day-cell ${record?.status || 'empty'}`} title={record ? `${day.format('DD.MM.YYYY')} — ${meta.label}${record.note ? `: ${record.note}` : ''}` : 'Belgilanmagan'}>{meta ? <span>{meta.icon}</span> : '—'}</td> })}
           <td className="count present"><b>{counts.present}</b></td><td className="count absent"><b>{counts.absent}</b></td><td className="count late"><b>{counts.late}</b></td>

@@ -6,6 +6,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Segmented,
   Select,
 } from "antd";
 import dayjs from "dayjs";
@@ -14,12 +15,14 @@ import { toast } from "react-toastify";
 import {
   apiErrorMessage,
   useCreatePaymentMutation,
+  useCreateDepositPaymentMutation,
   useGetDebtorsQuery,
   useGetGeneralSettingsQuery,
   useSendDebtorSmsMutation,
   useSetDebtorDeadlineMutation,
 } from "../../store/baseApi";
 import { printPaymentReceipt } from "../payments/paymentReceipt";
+import { printDepositReceipt } from "../payments/depositReceipt";
 import "./Debtors.css";
 
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
@@ -42,6 +45,7 @@ export function DebtorsPage({ currentEmployee }) {
   const [deadlineForm] = Form.useForm();
   const [createPayment, { isLoading: creatingPayment }] =
     useCreatePaymentMutation();
+  const [createDepositPayment, { isLoading: creatingDeposit }] = useCreateDepositPaymentMutation();
   const [setDebtorDeadline, { isLoading: savingDeadline }] = useSetDebtorDeadlineMutation();
   const [sendDebtorSms, { isLoading: sendingSms }] = useSendDebtorSmsMutation();
   const isOwner = ["owner", "admin"].includes(currentEmployee?.role);
@@ -51,6 +55,7 @@ export function DebtorsPage({ currentEmployee }) {
     0,
   );
   const selectedInstallmentId = Form.useWatch("installment", paymentForm);
+  const paymentKind = Form.useWatch("paymentKind", paymentForm);
   const selectedPeriod = paymentDebtor?.periods.find(
     (item) => item.id === selectedInstallmentId,
   );
@@ -72,6 +77,7 @@ export function DebtorsPage({ currentEmployee }) {
     const first = debtor.periods[0];
     setPaymentDebtor(debtor);
     paymentForm.setFieldsValue({
+      paymentKind: first ? "contract" : "deposit",
       installment: first?.id,
       paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
       paymentDates: {},
@@ -81,14 +87,23 @@ export function DebtorsPage({ currentEmployee }) {
   };
   const acceptPayment = async (values) => {
     try {
-      const paymentPeriod = paymentDebtor.periods.find(
-        (item) => item.id === values.installment,
-      );
-      if (!partsTotal || partsTotal > paymentPeriod.debt) {
+      const paymentParts = Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() }));
+      const maximum = values.paymentKind === "deposit" ? Number(paymentDebtor.depositDebt || 0) : Number(paymentDebtor.periods.find((item) => item.id === values.installment)?.debt || 0);
+      if (!partsTotal || partsTotal > maximum) {
         toast.error(partsTotal ? "To‘lov summasi qarzdorlikdan oshmasligi kerak" : "Kamida bitta to‘lov usuliga summa kiriting");
         return;
       }
-      const paymentParts = Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() }));
+      if (values.paymentKind === "deposit") {
+        const result = await createDepositPayment({ studentId: paymentDebtor.student.id, paymentParts }).unwrap();
+        printDepositReceipt(result.student || paymentDebtor.student, result.payments, settingsData?.settings);
+        toast.success("Depozit to‘lovi muvaffaqiyatli qabul qilindi");
+        setPaymentDebtor(null);
+        paymentForm.resetFields();
+        return;
+      }
+      const paymentPeriod = paymentDebtor.periods.find(
+        (item) => item.id === values.installment,
+      );
       const result = await createPayment({
         contract: paymentPeriod.contractId,
         installment: paymentPeriod.id,
@@ -319,9 +334,9 @@ export function DebtorsPage({ currentEmployee }) {
                         <div className="debtor-row-actions">
                           <button
                             className="debtor-pay-btn"
-                            onClick={() => debtor.periods.length ? openPayment(debtor) : navigate(`/student/${debtor.student.id}`)}
+                            onClick={() => debtor.periods.length || debtor.depositDebt ? openPayment(debtor) : navigate(`/student/${debtor.student.id}`)}
                           >
-                            {debtor.periods.length ? "To‘lov qilish" : "Profilga o‘tish"}
+                            {debtor.periods.length || debtor.depositDebt ? "To‘lov qilish" : "Profilga o‘tish"}
                           </button>
                           <button
                             className="debtor-history-btn"
@@ -343,7 +358,7 @@ export function DebtorsPage({ currentEmployee }) {
                           {isOwner && debtor.periods.length > 0 && <button className="debtor-deadline-btn" onClick={() => openDeadline(debtor)}>Deadline</button>}
                           {isOwner && <button className="debtor-history-btn" disabled={sendingSms || debtor.smsSentCount >= 3} onClick={() => sendSms(debtor)} title={debtor.smsSentCount >= 3 ? 'SMS limiti tugagan' : 'Qarzdorlik SMSini yuborish'}>SMS ({debtor.smsSentCount || 0}/3)</button>}
                           <button className="debtor-more-btn" aria-label="Amallar" onClick={() => setActionDebtor(actionDebtor?.student?.id === debtor.student.id ? null : debtor)}>⋯</button>
-                          {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions">{debtor.periods.length > 0 && <button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button>}<button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && debtor.periods.length > 0 && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
+                          {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions">{(debtor.periods.length > 0 || debtor.depositDebt > 0) && <button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button>}<button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && debtor.periods.length > 0 && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
                         </div>
                       </td>
                     </tr>
@@ -469,6 +484,13 @@ export function DebtorsPage({ currentEmployee }) {
           onFinish={acceptPayment}
         >
           <Form.Item
+            name="paymentKind"
+            label="To‘lov yo‘nalishi"
+          >
+            <Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi", disabled: !(paymentDebtor?.periods || []).length }, { value: "deposit", label: "Depozit to‘lovi", disabled: !Number(paymentDebtor?.depositDebt || 0) }]} onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {} })} />
+          </Form.Item>
+          {paymentKind === "contract" && <>
+          <Form.Item
             name="installment"
             label="Qaysi oy uchun"
             rules={[{ required: true, message: "Davrni tanlang" }]}
@@ -481,12 +503,14 @@ export function DebtorsPage({ currentEmployee }) {
               }))}
             />
           </Form.Item>
-          {selectedPeriod && (
+          </>}
+          {paymentKind === "contract" && selectedPeriod && (
             <div className="debtor-payment-balance">
               <span>Tanlangan davr qarzdorligi</span>
               <strong>{money(selectedPeriod.debt)}</strong>
             </div>
           )}
+          {paymentKind === "deposit" && <div className="debtor-payment-balance"><span>Depozit qarzdorligi</span><strong>{money(paymentDebtor?.depositDebt)}</strong></div>}
           <div className="debtor-payment-split">
             <label>To‘lov usullari bo‘yicha summa va sana</label>
             <div className="debtor-payment-methods">
@@ -497,7 +521,7 @@ export function DebtorsPage({ currentEmployee }) {
                 </div>
               ))}
             </div>
-            <div className={`debtor-payment-total ${partsTotal > Number(selectedPeriod?.debt || 0) ? "invalid" : ""}`}><div><small>Jami to‘lov</small><strong>{money(partsTotal)}</strong></div><div><small>Maksimal</small><strong>{money(selectedPeriod?.debt)}</strong></div></div>
+            <div className={`debtor-payment-total ${partsTotal > Number(paymentKind === "deposit" ? paymentDebtor?.depositDebt : selectedPeriod?.debt || 0) ? "invalid" : ""}`}><div><small>Jami to‘lov</small><strong>{money(partsTotal)}</strong></div><div><small>Maksimal</small><strong>{money(paymentKind === "deposit" ? paymentDebtor?.depositDebt : selectedPeriod?.debt)}</strong></div></div>
           </div>
           <Form.Item name="payerType" label="To‘lovni kim qildi?" rules={[{ required: true, whitespace: true, message: "To‘lovchini kiriting" }]}><Input maxLength={150} placeholder="Masalan: otasi yoki talabaning o‘zi" /></Form.Item>
           <Form.Item name="note" label="Izoh">
@@ -505,7 +529,7 @@ export function DebtorsPage({ currentEmployee }) {
           </Form.Item>
           <div className="debtor-payment-actions">
             <Button onClick={() => setPaymentDebtor(null)}>Bekor qilish</Button>
-            <Button type="primary" htmlType="submit" loading={creatingPayment}>
+            <Button type="primary" htmlType="submit" loading={creatingPayment || creatingDeposit}>
               To‘lovni tasdiqlash
             </Button>
           </div>

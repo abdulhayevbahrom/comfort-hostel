@@ -540,7 +540,7 @@ export const baseApi = createApi({
     createDepositPayment: builder.mutation({
       query: ({ studentId, paymentParts }) => ({ url: `/students/${studentId}/deposit-payments`, method: 'POST', body: { paymentParts } }),
       transformResponse: (response) => response.data,
-      invalidatesTags: [{ type: 'Student', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
+      invalidatesTags: (_result, _error, { studentId }) => [{ type: 'Student', id: 'LIST' }, { type: 'Student', id: studentId }, { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: `STUDENT-${studentId}` }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
     }),
     deletePayment: builder.mutation({
       query: (id) => ({ url: `/payments/${id}`, method: 'DELETE' }),

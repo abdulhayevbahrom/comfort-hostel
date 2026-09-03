@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
+import { Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { toast } from 'react-toastify'
 import { apiErrorMessage, useApproveCashSessionMutation, useCancelCashSessionMutation, useCloseCashSessionMutation, useGetCashSessionsQuery } from '../../store/baseApi'
@@ -16,6 +16,7 @@ export function CashPage({ currentEmployee }) {
   const [transferMethod, setTransferMethod] = useState('cash')
   const [selected, setSelected] = useState(null)
   const [contributorsSession, setContributorsSession] = useState(null)
+  const [historyDate, setHistoryDate] = useState('')
   const [closeForm] = Form.useForm()
   const [approveForm] = Form.useForm()
   const closeAmount = Form.useWatch('amount', closeForm)
@@ -23,7 +24,7 @@ export function CashPage({ currentEmployee }) {
   const isHeadCashier = currentEmployee?.role === 'head_cashier'
   const isCashRole = isCashier || isHeadCashier
   const canReview = ['owner', 'admin'].includes(currentEmployee?.role)
-  const { data, isLoading, error } = useGetCashSessionsQuery(undefined, { skip: !isCashRole && !canReview })
+  const { data, isLoading, error } = useGetCashSessionsQuery(historyDate ? { date: historyDate } : {}, { skip: !isCashRole && !canReview })
   const [closeCash, { isLoading: closing }] = useCloseCashSessionMutation()
   const [approveCash, { isLoading: approving }] = useApproveCashSessionMutation()
   const [cancelCash, { isLoading: cancelling }] = useCancelCashSessionMutation()
@@ -58,6 +59,13 @@ export function CashPage({ currentEmployee }) {
   if (error) return <div className="form-error">{apiErrorMessage(error)}</div>
 
   return <div className="cash-page">
+    <section className="cash-history-filter">
+      <div>
+        <h2>Kassa manbalari</h2>
+        <p>Yopilgan kassani sana bo‘yicha topib, ichidagi to‘lovchilarni ko‘ring.</p>
+      </div>
+      <DatePicker allowClear placeholder="Yopilgan sana" value={historyDate ? dayjs(historyDate) : null} format="DD.MM.YYYY" onChange={(date) => setHistoryDate(date?.format('YYYY-MM-DD') || '')} />
+    </section>
     {isCashRole ? <>
       <section className="cash-summary cashier-summary">
         <article><small>Ochiq kassada</small><strong>{money(data?.open?.balance)}</strong><Breakdown breakdown={data?.open?.breakdown} /></article>
@@ -65,8 +73,8 @@ export function CashPage({ currentEmployee }) {
       </section>
       <section className="cash-card cash-close-card"><div><h2>Mablag‘ni {isHeadCashier ? 'ownerga' : 'bosh kassirga'} topshirish</h2><p>Har safar bitta to‘lov turini to‘liq yoki qisman topshiring.</p></div><Button type="primary" disabled={!data?.open?.balance} onClick={() => { const firstMethod = methodKeys.find((key) => Number(data?.open?.breakdown?.[key] || 0) > 0) || 'cash'; setTransferMethod(firstMethod); closeForm.setFieldsValue({ amount: null, note: '' }); setCloseOpen(true) }}>Pul topshirish</Button></section>
       {isHeadCashier && <section className="cash-card"><div className="cash-card-title"><h2>Kassirlardan qabul qilish</h2><p>Kassir topshirgan mablag‘ni tekshirib, bosh kassir kassasiga oling.</p></div><CashTable sessions={data?.pendingSessions || []} onApprove={openApprove} onCancel={cancelRequest} onContributors={setContributorsSession} cancelling={cancelling} /></section>}
-      <CashHistory sessions={data?.sessions || []} cashier={false} onCancel={cancelRequest} onContributors={setContributorsSession} cancelling={cancelling} />
-      {isHeadCashier && <CashHistory sessions={data?.recentIncoming || []} cashier onContributors={setContributorsSession} />}
+      <CashHistory sessions={data?.sessions || []} cashier={false} onCancel={cancelRequest} onContributors={setContributorsSession} cancelling={cancelling} historyDate={historyDate} />
+      {isHeadCashier && <CashHistory sessions={data?.recentIncoming || []} cashier onContributors={setContributorsSession} historyDate={historyDate} />}
     </> : <>
       <section className="cash-summary">
         <article><small>Markaziy kassada</small><strong>{money(data?.summary?.centralCash)}</strong><Breakdown breakdown={data?.summary?.breakdown} /></article>
@@ -75,7 +83,7 @@ export function CashPage({ currentEmployee }) {
       </section>
       <section className="cash-card"><div className="cash-card-title"><h2>Kassirlardagi qoldiq</h2><p>Naqd va shaxsiy hisobga tushgan mablag‘lar.</p></div><CashierBalances rows={data?.cashierBalances || []} /></section>
       <section className="cash-card"><div className="cash-card-title"><h2>Tasdiqlash kutilayotgan kassalar</h2><p>Pulni sanang va haqiqiy summani kiriting.</p></div><CashTable sessions={data?.pendingSessions || []} onApprove={openApprove} onCancel={cancelRequest} onContributors={setContributorsSession} cancelling={cancelling} /></section>
-      <CashHistory sessions={data?.recentSessions || []} cashier onContributors={setContributorsSession} />
+      <CashHistory sessions={data?.recentSessions || []} cashier onContributors={setContributorsSession} historyDate={historyDate} />
     </>}
 
     <Modal open={closeOpen} onCancel={() => setCloseOpen(false)} footer={null} title="Mablag‘ni qisman yoki to‘liq topshirish" destroyOnHidden>
@@ -117,7 +125,7 @@ function CancelRequestButton({ onConfirm, loading }) {
 }
 
 function ContributorsButton({ session, onClick }) {
-  const count = session?.contributors?.length || 0
+  const count = new Set((session?.contributors || []).map((item) => item.student || item.studentName || item.sourceKey).filter(Boolean)).size
   return <Button size="small" onClick={() => onClick(session)}>{count ? `${count} ta to‘lovchi` : 'Ko‘rish'}</Button>
 }
 
@@ -125,8 +133,9 @@ function CashTable({ sessions, onApprove, onCancel, onContributors, cancelling }
   return <div className="cash-table-wrap"><table><thead><tr><th>Kassir</th><th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>To‘lovchilar</th><th>Kassir izohi</th><th>Amal</th></tr></thead><tbody>{sessions.map((session) => <tr key={session.id}><td data-label="Kassir"><strong>{fullName(session.cashier)}</strong><small>{session.cashier?.position}</small></td><td data-label="Vaqt">{dayjs(session.closedAt).format('DD.MM.YYYY HH:mm')}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="To‘lovchilar"><ContributorsButton session={session} onClick={onContributors} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Amal"><div className="cash-actions"><Button size="small" type="primary" onClick={() => onApprove(session)}>Pulni qabul qilish</Button><CancelRequestButton onConfirm={() => onCancel(session.id)} loading={cancelling} /></div></td></tr>)}{!sessions.length && <tr><td colSpan={7} className="cash-empty">Tasdiqlash kutilayotgan mablag‘ yo‘q</td></tr>}</tbody></table></div>
 }
 
-function CashHistory({ sessions, cashier, onCancel, onContributors, cancelling }) {
-  return <section className="cash-card"><div className="cash-card-title"><h2>Kassa tarixi</h2><p>Topshirilgan va qabul qilingan mablag‘lar</p></div><div className="cash-table-wrap"><table><thead><tr>{cashier && <th>Kassir</th>}<th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>To‘lovchilar</th><th>Kassir izohi</th><th>Admin izohi</th><th>Holat</th>{onCancel && <th>Amal</th>}</tr></thead><tbody>{sessions.map((session) => <tr key={session.id}>{cashier && <td data-label="Kassir">{fullName(session.cashier)}</td>}<td data-label="Vaqt">{session.closedAt ? dayjs(session.closedAt).format('DD.MM.YYYY HH:mm') : '—'}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="To‘lovchilar"><ContributorsButton session={session} onClick={onContributors} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Admin izohi"><span className="cash-note">{session.reviewNote || '—'}</span></td><td data-label="Holat"><span className={`cash-status ${session.status}`}>{session.status === 'approved' ? 'Qabul qilingan' : session.status === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}</span></td>{onCancel && <td data-label="Amal">{session.status === 'pending' && <CancelRequestButton onConfirm={() => onCancel(session.id)} loading={cancelling} />}</td>}</tr>)}{!sessions.length && <tr><td colSpan={(cashier ? 8 : 7) + (onCancel ? 1 : 0)} className="cash-empty">Kassa tarixi hali yo‘q</td></tr>}</tbody></table></div></section>
+function CashHistory({ sessions, cashier, onCancel, onContributors, cancelling, historyDate }) {
+  const label = historyDate ? `${dayjs(historyDate).format('DD.MM.YYYY')} kuni yopilgan kassalar` : 'Oxirgi topshirilgan va qabul qilingan mablag‘lar'
+  return <section className="cash-card"><div className="cash-card-title"><h2>Kassa tarixi</h2><p>{label}</p></div><div className="cash-table-wrap"><table><thead><tr>{cashier && <th>Kassir</th>}<th>Topshirilgan vaqt</th><th>Summa</th><th>Tarkibi</th><th>To‘lovchilar</th><th>Kassir izohi</th><th>Admin izohi</th><th>Holat</th>{onCancel && <th>Amal</th>}</tr></thead><tbody>{sessions.map((session) => <tr key={session.id}>{cashier && <td data-label="Kassir">{fullName(session.cashier)}</td>}<td data-label="Vaqt">{session.closedAt ? dayjs(session.closedAt).format('DD.MM.YYYY HH:mm') : '—'}</td><td data-label="Summa"><b>{money(session.expectedAmount)}</b></td><td data-label="Tarkibi"><Breakdown breakdown={session.breakdown || { cash: session.expectedAmount }} /></td><td data-label="To‘lovchilar"><ContributorsButton session={session} onClick={onContributors} /></td><td data-label="Kassir izohi"><span className="cash-note">{session.note || '—'}</span></td><td data-label="Admin izohi"><span className="cash-note">{session.reviewNote || '—'}</span></td><td data-label="Holat"><span className={`cash-status ${session.status}`}>{session.status === 'approved' ? 'Qabul qilingan' : session.status === 'pending' ? 'Kutilmoqda' : 'Rad etilgan'}</span></td>{onCancel && <td data-label="Amal">{session.status === 'pending' && <CancelRequestButton onConfirm={() => onCancel(session.id)} loading={cancelling} />}</td>}</tr>)}{!sessions.length && <tr><td colSpan={(cashier ? 8 : 7) + (onCancel ? 1 : 0)} className="cash-empty">{historyDate ? 'Tanlangan sanada yopilgan kassa yo‘q' : 'Kassa tarixi hali yo‘q'}</td></tr>}</tbody></table></div></section>
 }
 
 function Contributors({ session }) {

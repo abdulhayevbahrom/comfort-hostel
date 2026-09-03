@@ -19,6 +19,7 @@
 .table-action-wrap { display: flex; gap: 8px; }
 .hotel-icon-btn { display: grid; width: 32px; height: 32px; place-items: center; padding: 0; color: #0f766e; background: #eaf8f6; border: 1px solid #bce4df; border-radius: 8px; }
 .hotel-icon-btn:hover { background: #d9f2ee; }
+.hotel-icon-btn.calendar{color:#285f91;background:#edf6ff;border-color:#c5ddf3}.hotel-icon-btn.calendar:hover{background:#dfefff}
 .hotel-icon-btn.danger { color: #8c2b2b; background: #fff2f2; border-color: #dfb0b0; }
 .hotel-icon-btn:disabled { cursor: not-allowed; opacity: .45; }
 .section-view-btn { display: flex; align-items: center; gap: 6px; padding: 6px 10px; color: #0f6d66; background: #eef9f7; border: 1px solid #c5e7e2; border-radius: 8px; }
@@ -47,6 +48,7 @@
 .hotel-form-actions { display: flex; gap: 8px; margin-top: 14px; }
 .employee-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 .employee-schedule-section{padding:12px 14px;margin-bottom:12px;background:#f4f9f8;border:1px solid #d8e8e6;border-radius:9px}.employee-schedule-section h3{margin:0 0 10px;color:#315d66;font-size:14px}.employee-schedule-section .ant-form-item:last-child{margin-bottom:0}.employee-schedule-section .ant-checkbox-group{grid-template-columns:repeat(7,minmax(0,1fr))}
+.employee-offdays-picker{display:grid;gap:12px}.employee-offdays-list{display:flex;flex-wrap:wrap;gap:6px;min-height:42px;padding:10px;background:#f4f9f8;border:1px solid #d8e8e6;border-radius:9px}.employee-offdays-list span{padding:5px 8px;color:#285f91;background:#edf6ff;border:1px solid #c5ddf3;border-radius:999px;font-size:12px;font-weight:750}.employee-offdays-list em{align-self:center;color:#7b8f95;font-size:13px;font-style:normal}
 .hotel-submit-btn { color: #fff !important; background: #159988 !important; border-color: #0f766e !important; font-weight: 700; }
 .form-error { padding: 8px 10px; margin-bottom: 10px; color: #b42318; background: #fff1f1; border: 1px solid #f3c3c3; border-radius: 8px; font-size: 14px; }
 .hotel-popconfirm .ant-popover-inner, .hotel-popover .ant-popover-inner { background: #fff; border: 1px solid #c9e2e5; border-radius: 12px; }
@@ -86,3 +88,4 @@
   .hotel-primary-btn { height: 32px; min-height: 32px; padding-top: 0; padding-bottom: 0; }
 }
 .employee-role.head_cashier{color:#744b91;background:#f2e9f8}
+.shop-employees .hotel-table th,.shop-employees .hotel-table td{padding:12px 14px;font-size:15px}.shop-employees .hotel-table th{font-size:12px}.shop-employees .employee-face-code{font-size:11px}.shop-employees .employee-work-time{font-size:12px}.shop-employees .hotel-table td strong{font-size:15px}.shop-employees .hotel-table-empty{font-size:15px}

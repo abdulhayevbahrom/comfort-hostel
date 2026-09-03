@@ -659,7 +659,7 @@ export const baseApi = createApi({
       invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
     }),
     getCashSessions: builder.query({
-      query: () => '/cash-sessions',
+      query: (params = {}) => ({ url: '/cash-sessions', params }),
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'CashSession', id: 'LIST' }],
       async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {

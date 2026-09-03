@@ -30,6 +30,11 @@ const initialForm = {
   assignedRooms: [],
   faceIdCode: '',
   faceAccessEnabled: true,
+  workSchedule: {
+    checkInTime: '09:00',
+    checkOutTime: '18:00',
+    offDates: [],
+  },
 }
 
 const sectionOptions = [
@@ -52,11 +57,11 @@ const sectionOptions = [
 
 const sectionLabels = new Map(sectionOptions.map((item) => [item.value, item.label]))
 
-const EmployeeRow = memo(function EmployeeRow({ employee, schedule, isShop, isDeleting, canManage, onEdit, onManageRooms, onDelete }) {
+const EmployeeRow = memo(function EmployeeRow({ employee, schedule, isShop, isDeleting, canManage, onEdit, onManageRooms, onOffDays, onDelete }) {
   return (
     <tr>
       <td data-label="F.I.SH"><strong>{employee.firstname} {employee.lastname}</strong><small className="employee-face-code">{employee.faceIdCode || 'FaceID kodi yo‘q'}</small></td>
-      <td data-label="Lavozim"><strong>{employee.position}</strong><small className="employee-work-time">Umumiy grafik: {schedule?.checkInTime || '09:00'}–{schedule?.checkOutTime || '18:00'}</small></td>
+      <td data-label="Lavozim"><strong>{employee.position}</strong><small className="employee-work-time">Ish vaqti: {employee.workSchedule?.checkInTime || schedule?.checkInTime || '09:00'}–{employee.workSchedule?.checkOutTime || schedule?.checkOutTime || '18:00'}</small></td>
       <td data-label="Oylik">{Number(employee.salary || 0).toLocaleString('uz-UZ')}</td>
       {!isShop && <td data-label="Rol"><span className={`employee-role ${employee.role}`}>{employee.role === 'owner' || employee.role === 'admin' ? 'Owner' : employee.role === 'manager' ? 'Menejer' : employee.role === 'head_cashier' ? 'Bosh kassir' : employee.role === 'cashier' ? 'Kassir' : 'Xodim'}</span></td>}
       {!isShop && <td data-label="Login">{employee.login || '-'}</td>}
@@ -82,6 +87,9 @@ const EmployeeRow = memo(function EmployeeRow({ employee, schedule, isShop, isDe
         {canManage ? <div className="table-action-wrap">
           <button className="hotel-icon-btn" onClick={() => onEdit(employee)} aria-label="Tahrirlash" title="Tahrirlash">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M4 20H8L18 10L14 6L4 16V20Z" stroke="currentColor" strokeWidth="2"/><path d="M12 8L16 12" stroke="currentColor" strokeWidth="2"/></svg>
+          </button>
+          <button className="hotel-icon-btn calendar" onClick={() => onOffDays(employee)} aria-label="Dam kunlari" title="Dam kunlari">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" strokeWidth="2"/><path d="M8 14H11M13 14H16M8 17H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           </button>
           <Popconfirm
             title="Xodimni o‘chirish"
@@ -121,6 +129,8 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
   const [roomFloor, setRoomFloor] = useState()
   const [roomEmployee, setRoomEmployee] = useState(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState([])
+  const [offDaysEmployee, setOffDaysEmployee] = useState(null)
+  const [selectedOffDays, setSelectedOffDays] = useState([])
   const canLogin = Form.useWatch('canLogin', form)
   const schedule = settingsData?.settings?.employeeWorkSchedule
   const employees = useMemo(() => data?.employees || [], [data?.employees])
@@ -178,9 +188,14 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
       assignedRooms: (employee.assignedRooms || []).map((room) => room.id),
       faceIdCode: employee.faceIdCode || '',
       faceAccessEnabled: employee.faceAccessEnabled !== false,
+      workSchedule: {
+        checkInTime: employee.workSchedule?.checkInTime || schedule?.checkInTime || '09:00',
+        checkOutTime: employee.workSchedule?.checkOutTime || schedule?.checkOutTime || '18:00',
+        offDates: employee.workSchedule?.offDates || [],
+      },
     })
     setIsModalOpen(true)
-  }, [form, isShop])
+  }, [form, isShop, schedule])
 
   const openRoomsModal = useCallback((employee) => {
     setRoomEmployee(employee)
@@ -195,6 +210,51 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
     setRoomEmployee(null)
     setSelectedRoomIds([])
   }, [])
+
+  const openOffDaysModal = useCallback((employee) => {
+    setOffDaysEmployee(employee)
+    setSelectedOffDays((employee.workSchedule?.offDates || []).map((date) => dayjs(date)).filter((date) => date.isValid()))
+    setError('')
+  }, [])
+
+  const closeOffDaysModal = useCallback(() => {
+    setOffDaysEmployee(null)
+    setSelectedOffDays([])
+  }, [])
+
+  const saveOffDays = useCallback(async () => {
+    if (!offDaysEmployee) return
+    const offDates = selectedOffDays.map((date) => date.format('YYYY-MM-DD')).sort()
+    try {
+      await updateEmployee({
+        id: offDaysEmployee.id,
+        firstname: offDaysEmployee.firstname,
+        lastname: offDaysEmployee.lastname,
+        position: offDaysEmployee.position,
+        salary: Number(offDaysEmployee.salary || 0),
+        payrollStartMonth: offDaysEmployee.payrollStartMonth || dayjs().format('YYYY-MM'),
+        payrollOpeningBalance: Number(offDaysEmployee.payrollOpeningBalance || 0),
+        businessUnit,
+        canLogin: isShop ? false : Boolean(offDaysEmployee.canLogin),
+        sections: isShop ? [] : offDaysEmployee.sections || [],
+        role: offDaysEmployee.role || 'employee',
+        assignedRooms: isShop ? [] : (offDaysEmployee.assignedRooms || []).map((room) => room.id || room),
+        faceIdCode: String(offDaysEmployee.faceIdCode || '').trim().toUpperCase(),
+        faceAccessEnabled: offDaysEmployee.faceAccessEnabled !== false,
+        workSchedule: {
+          checkInTime: offDaysEmployee.workSchedule?.checkInTime || schedule?.checkInTime || '09:00',
+          checkOutTime: offDaysEmployee.workSchedule?.checkOutTime || schedule?.checkOutTime || '18:00',
+          offDates,
+        },
+      }).unwrap()
+      toast.success('Dam kunlari saqlandi')
+      closeOffDaysModal()
+    } catch (requestError) {
+      const message = apiErrorMessage(requestError)
+      setError(message)
+      toast.error(message)
+    }
+  }, [businessUnit, closeOffDaysModal, isShop, offDaysEmployee, schedule, selectedOffDays, updateEmployee])
 
   const saveAssignedRooms = useCallback(async () => {
     if (!roomEmployee) return
@@ -229,6 +289,11 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
       assignedRooms: isShop ? [] : values.assignedRooms || [],
       faceIdCode: String(values.faceIdCode || '').trim().toUpperCase(),
       faceAccessEnabled: values.faceAccessEnabled !== false,
+      workSchedule: {
+        checkInTime: values.workSchedule?.checkInTime || '09:00',
+        checkOutTime: values.workSchedule?.checkOutTime || '18:00',
+        offDates: Array.isArray(values.workSchedule?.offDates) ? values.workSchedule.offDates : [],
+      },
     }
     if (payload.canLogin) {
       payload.login = String(values.login || '').trim()
@@ -281,7 +346,7 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
             <table className="hotel-table">
               <thead><tr><th>F.I.SH</th><th>Lavozim</th><th>Oylik</th>{!isShop && <><th>Rol</th><th>Login</th><th>Ruxsatlar</th><th>Xonalar</th></>}<th>Amal</th></tr></thead>
               <tbody>
-                {filteredEmployees.map((employee) => <EmployeeRow key={employee.id} employee={employee} schedule={schedule} isShop={isShop} isDeleting={isDeleting} canManage={canManage} onEdit={openEditModal} onManageRooms={openRoomsModal} onDelete={onDelete} />)}
+                {filteredEmployees.map((employee) => <EmployeeRow key={employee.id} employee={employee} schedule={schedule} isShop={isShop} isDeleting={isDeleting} canManage={canManage} onEdit={openEditModal} onManageRooms={openRoomsModal} onOffDays={openOffDaysModal} onDelete={onDelete} />)}
                 {!filteredEmployees.length && <tr><td colSpan={isShop ? 4 : 8} className="hotel-table-empty">Hech narsa topilmadi</td></tr>}
               </tbody>
             </table>
@@ -315,7 +380,10 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
               <Input maxLength={32} placeholder="Masalan: EMP001" />
             </Form.Item>
             <Form.Item name="faceAccessEnabled" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Bu xodim uchun FaceID davomati faol</Checkbox></Form.Item>
-            <p className="employee-global-schedule-note">Ish grafigi barcha xodimlar uchun Sozlamalar → Umumiy sozlamalar bo‘limida boshqariladi.</p>
+            <div className="employee-form-grid">
+              <Form.Item name={['workSchedule', 'checkInTime']} label="Ish boshlash vaqti" rules={[{ required: true, message: 'Ish boshlash vaqtini kiriting' }, { pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="09:00" /></Form.Item>
+              <Form.Item name={['workSchedule', 'checkOutTime']} label="Ish tugash vaqti" rules={[{ required: true, message: 'Ish tugash vaqtini kiriting' }, { pattern: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:mm formatida kiriting' }]}><Input placeholder="18:00" /></Form.Item>
+            </div>
           </section>
           {!isShop && <Form.Item name="canLogin" valuePropName="checked" className="hotel-checkbox-line"><Checkbox>Dasturga kira oladi</Checkbox></Form.Item>}
           {!isShop && canLogin && <>
@@ -350,6 +418,17 @@ export function EmployeesPage({ currentEmployee, businessUnit = 'hostel' }) {
         </div>
         {error && <div className="form-error">{error}</div>}
         <div className="hotel-form-actions"><Button onClick={saveAssignedRooms} loading={isAssigningRooms} className="hotel-submit-btn">Saqlash</Button><Button onClick={closeRoomsModal}>Yopish</Button></div>
+      </Modal>
+
+      <Modal open={Boolean(offDaysEmployee)} onCancel={closeOffDaysModal} footer={null} width={560} rootClassName="hotel-employee-modal" title={`${offDaysEmployee?.firstname || ''} ${offDaysEmployee?.lastname || ''} — dam kunlari`}>
+        <div className="employee-offdays-picker">
+          <DatePicker multiple value={selectedOffDays} onChange={(dates) => setSelectedOffDays(dates || [])} format="YYYY-MM-DD" style={{ width: '100%' }} />
+          <div className="employee-offdays-list">
+            {selectedOffDays.length ? selectedOffDays.map((date) => <span key={date.format('YYYY-MM-DD')}>{date.format('YYYY-MM-DD')}</span>) : <em>Dam kuni tanlanmagan</em>}
+          </div>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <div className="hotel-form-actions"><Button onClick={saveOffDays} loading={isUpdating} className="hotel-submit-btn">Saqlash</Button><Button onClick={closeOffDaysModal}>Yopish</Button></div>
       </Modal>
     </div>
   )

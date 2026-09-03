@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Segmented } from 'antd'
 import dayjs from 'dayjs'
 import { toast } from 'react-toastify'
-import { apiErrorMessage, useCreateEmployeeBonusMutation, useCreateSalaryPaymentMutation, useDeleteEmployeeBonusMutation, useDeleteSalaryPaymentMutation, useGetSalariesQuery } from '../../store/baseApi'
+import { apiErrorMessage, useCreateEmployeeBonusMutation, useCreateSalaryPaymentMutation, useDeleteEmployeeBonusMutation, useDeleteSalaryPaymentMutation, useGetSalariesQuery, useWaiveEmployeeAttendancePenaltyMutation } from '../../store/baseApi'
 import './Salaries.css'
 import './SalariesExtra.css'
 import { canEditOrDelete } from '../../utils/permissions'
@@ -18,12 +18,15 @@ export function SalariesPage({ currentEmployee, businessUnit = 'hostel' }) {
   const [selected, setSelected] = useState(null)
   const [historyRow, setHistoryRow] = useState(null)
   const [bonusRow, setBonusRow] = useState(null)
+  const [waiverRow, setWaiverRow] = useState(null)
+  const [waiverReason, setWaiverReason] = useState('')
   const [query, setQuery] = useState('')
   const { data, isLoading, isFetching, error } = useGetSalariesQuery({ period: period.format('YYYY-MM'), businessUnit })
   const [createPayment, { isLoading: saving }] = useCreateSalaryPaymentMutation()
   const [deletePayment] = useDeleteSalaryPaymentMutation()
   const [createBonus, { isLoading: savingBonus }] = useCreateEmployeeBonusMutation()
   const [deleteBonus] = useDeleteEmployeeBonusMutation()
+  const [waivePenalty, { isLoading: isWaiving }] = useWaiveEmployeeAttendancePenaltyMutation()
   const canManage = canEditOrDelete(currentEmployee)
   const canCreateFinancial = currentEmployee?.role === 'owner'
   const rows = useMemo(() => {
@@ -61,6 +64,16 @@ export function SalariesPage({ currentEmployee, businessUnit = 'hostel' }) {
   const removeBonus = async (id) => {
     try { await deleteBonus({ id, businessUnit }).unwrap(); toast.success('Bonus o‘chirildi') } catch (requestError) { toast.error(apiErrorMessage(requestError)) }
   }
+  const submitWaiver = async () => {
+    if (!waiverReason.trim()) return toast.info('Bekor qilish sababini kiriting')
+    try {
+      await waivePenalty({ employeeId: historyRow.employee.id, date: waiverRow.date, reason: waiverReason.trim() }).unwrap()
+      toast.success('Jarima bekor qilindi')
+      setWaiverRow(null)
+      setWaiverReason('')
+      setHistoryRow(null)
+    } catch (requestError) { toast.error(apiErrorMessage(requestError)) }
+  }
   const totals = data?.totals || {}
 
   return <div className="salaries-page">
@@ -96,10 +109,22 @@ export function SalariesPage({ currentEmployee, businessUnit = 'hostel' }) {
       </Form>
     </Modal>
     <Modal open={Boolean(historyRow)} onCancel={() => setHistoryRow(null)} footer={null} width={820} title={historyRow ? `${fullName(historyRow.employee)} — ${period.format('MMMM YYYY')} tarixi` : ''} rootClassName="salary-history-modal">
-      <div className="salary-payroll-breakdown"><span>Bazaviy oylik<b>{money(historyRow?.baseSalary)}</b></span><span>Kelgan / kelmagan<b>{historyRow?.payroll?.presentDays || 0} / {historyRow?.payroll?.absentDays || 0} kun</b></span><span>Kechikish / erta ketish<b>{historyRow?.payroll?.totalLateMinutes || 0} / {historyRow?.payroll?.totalEarlyLeaveMinutes || 0} daq.</b></span><span>Jami jarima<b>{money(historyRow?.payroll?.deductions?.totalDeduction)}</b></span><span>Bonus<b>{money(historyRow?.bonusAmount)}</b></span><span>Sof oylik<b>{money(historyRow?.salary)}</b></span></div>
+      <div className="salary-payroll-breakdown list-view">
+        <div><span>Bazaviy oylik<b>{money(historyRow?.baseSalary)}</b></span><span>Kelgan / kelmagan<b>{historyRow?.payroll?.presentDays || 0} / {historyRow?.payroll?.absentDays || 0} kun</b></span><span>Kechikish / erta ketish<b>{historyRow?.payroll?.totalLateMinutes || 0} / {historyRow?.payroll?.totalEarlyLeaveMinutes || 0} daq.</b></span></div>
+        <div><span>Jami jarima<b>{money(historyRow?.payroll?.deductions?.totalDeduction)}</b></span><span>Bonus<b>{money(historyRow?.bonusAmount)}</b></span><span>Sof oylik<b>{money(historyRow?.salary)}</b></span></div>
+      </div>
+      <h3 className="salary-history-title">Jarimalar</h3>
+      <div className="salary-history"><div className="salary-history-table-wrap"><table><thead><tr><th>Sana</th><th>Sabab</th><th>Tafsilot</th><th>Summa</th><th>Holat</th>{canCreateFinancial && <th>Amal</th>}</tr></thead><tbody>{(historyRow?.penaltyRows || []).map((penalty, index) => <tr key={`${penalty.date}-${penalty.type}-${index}`}><td>{dayjs(penalty.date).format('DD.MM.YYYY')}</td><td>{penalty.label}</td><td>{penalty.detail}</td><td><b>{money(penalty.amount)}</b></td><td>{penalty.waived ? <span className="salary-penalty-waived">Bekor qilingan</span> : <span className="salary-penalty-active">Faol</span>}</td>{canCreateFinancial && <td>{penalty.waived ? '—' : <button className="salary-waive-btn" onClick={() => { setWaiverRow(penalty); setWaiverReason('') }}>Bekor qilish</button>}</td>}</tr>)}{!historyRow?.penaltyRows?.length && <tr><td colSpan={canCreateFinancial ? 6 : 5} className="salary-history-empty">Bu oyda jarima yo‘q.</td></tr>}</tbody></table></div></div>
+      <h3 className="salary-history-title">To‘lovlar</h3>
       <div className="salary-history"><div className="salary-history-table-wrap"><table><thead><tr><th>Sana va vaqt</th><th>Summa</th><th>To‘lov turi</th><th>Izoh</th><th>Kiritgan xodim</th>{canManage && <th>Amal</th>}</tr></thead><tbody>{(historyRow?.payments || []).map((payment) => <tr key={payment.id}><td>{dayjs(payment.createdAt).format('DD.MM.YYYY HH:mm')}</td><td><b>{money(payment.amount)}</b></td><td><span className={`salary-payment-method ${payment.paymentType}`}>{paymentLabels[payment.paymentType]}</span></td><td>{payment.note || '—'}</td><td>{fullName(payment.createdBy) || '—'}</td>{canManage && <td><Popconfirm title="To‘lov o‘chirilsinmi?" okText="O‘chirish" cancelText="Bekor" onConfirm={() => remove(payment.id)}><button>O‘chirish</button></Popconfirm></td>}</tr>)}{!historyRow?.payments?.length && <tr><td colSpan={canManage ? 6 : 5} className="salary-history-empty">Bu oyda to‘lov qilinmagan.</td></tr>}</tbody></table></div></div>
       <h3 className="salary-history-title">Bonuslar</h3>
       <div className="salary-history"><div className="salary-history-table-wrap"><table><thead><tr><th>Sana va vaqt</th><th>Summa</th><th>Sabab</th><th>Kiritgan xodim</th>{canManage && <th>Amal</th>}</tr></thead><tbody>{(historyRow?.bonuses || []).map((bonus) => <tr key={bonus.id}><td>{dayjs(bonus.createdAt).format('DD.MM.YYYY HH:mm')}</td><td><b className="bonus-money">+ {money(bonus.amount)}</b></td><td>{bonus.reason}</td><td>{fullName(bonus.createdBy) || '—'}</td>{canManage && <td><Popconfirm title="Bonus o‘chirilsinmi?" okText="O‘chirish" cancelText="Bekor" onConfirm={() => removeBonus(bonus.id)}><button>O‘chirish</button></Popconfirm></td>}</tr>)}{!historyRow?.bonuses?.length && <tr><td colSpan={canManage ? 5 : 4} className="salary-history-empty">Bu oyda bonus berilmagan.</td></tr>}</tbody></table></div></div>
+    </Modal>
+    <Modal open={Boolean(waiverRow)} onCancel={() => setWaiverRow(null)} footer={null} title="Jarimani bekor qilish" rootClassName="salary-modal" destroyOnHidden>
+      <p className="waiver-modal-help">{waiverRow ? `${dayjs(waiverRow.date).format('DD.MM.YYYY')} kungi ${waiverRow.label} jarimasi bekor qilinadi.` : ''}</p>
+      <label className="waiver-reason-label">Bekor qilish sababi</label>
+      <Input.TextArea rows={4} maxLength={500} value={waiverReason} onChange={(event) => setWaiverReason(event.target.value)} placeholder="Masalan: ruxsat bilan kelmagan" />
+      <div className="salary-modal-actions"><Button onClick={() => setWaiverRow(null)}>Yopish</Button><Button type="primary" loading={isWaiving} onClick={submitWaiver}>Bekor qilish</Button></div>
     </Modal>
   </div>
 }

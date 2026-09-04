@@ -259,7 +259,8 @@ export function DebtorsPage({ currentEmployee }) {
               </thead>
               <tbody>
                 {debtors.map((debtor) => {
-                  const room = debtor.contracts?.[0]?.room;
+                  const contract = debtor.contracts?.[0];
+                  const room = contract?.room;
                   return (
                     <tr key={debtor.student.id} className={debtor.isDeadlineReached ? "debtor-deadline-reached" : ""}>
                       <td data-label="Talaba">
@@ -302,7 +303,10 @@ export function DebtorsPage({ currentEmployee }) {
                             <strong>
                               {room.block} · {room.roomNumber}-xona
                             </strong>
-                            <small>{room.floor}-qavat</small>
+                            <small>
+                              {room.floor}-qavat
+                              {contract.bedNumber ? ` · ${contract.bedNumber}-o‘rin` : ""}
+                            </small>
                           </>
                         ) : (
                           "—"

@@ -4,16 +4,7 @@ import { toast } from 'react-toastify'
 import { apiErrorMessage, useGetGeneralSettingsQuery, useUpdateGeneralSettingsMutation } from '../../store/baseApi'
 import './SettingsPages.css'
 
-const defaultDebtorSmsTemplate = "Hurmatli {studentName} sizda {period} uchun {debtAmount} so'm qarzdorlik mavjud. Qarzdorlikni to'lamasangiz binoga kirish taqiqlanadi. {hostelName}!"
 const workDayOptions = [{ label: 'Du', value: 1 }, { label: 'Se', value: 2 }, { label: 'Ch', value: 3 }, { label: 'Pa', value: 4 }, { label: 'Ju', value: 5 }, { label: 'Sh', value: 6 }, { label: 'Ya', value: 0 }]
-
-function smsPreview(template) {
-  return String(template || defaultDebtorSmsTemplate)
-    .replaceAll('{studentName}', 'Bahromjon Abdulhayev')
-    .replaceAll('{debtAmount}', '300 000')
-    .replaceAll('{period}', 'Avgust oyi')
-    .replaceAll('{hostelName}', 'TizimPlus Hostel')
-}
 
 export function GeneralSettingsPage() {
   const [form] = Form.useForm()
@@ -24,7 +15,6 @@ export function GeneralSettingsPage() {
   const [error, setError] = useState('')
   const settings = data?.settings
   const receiptThankYou = Form.useWatch('receiptThankYou', form)
-  const debtorSmsTemplate = Form.useWatch('debtorSmsTemplate', form)
   const useTimePenalty = Form.useWatch(['employeeWorkSchedule', 'useTimePenalty'], form)
 
   useEffect(() => {
@@ -34,7 +24,6 @@ export function GeneralSettingsPage() {
       organizationPhone: settings.organizationPhone,
       organizationAddress: settings.organizationAddress,
       receiptThankYou: settings.receiptThankYou,
-      debtorSmsTemplate: settings.debtorSmsTemplate || defaultDebtorSmsTemplate,
       employeeFaceAttendanceEnabled: settings.employeeFaceAttendanceEnabled !== false,
       employeeWorkSchedule: {
         checkInTime: settings.employeeWorkSchedule?.checkInTime || '09:00',
@@ -58,7 +47,6 @@ export function GeneralSettingsPage() {
         organizationPhone: values.organizationPhone.trim(),
         organizationAddress: values.organizationAddress.trim(),
         receiptThankYou: values.receiptThankYou.trim(),
-        debtorSmsTemplate: values.debtorSmsTemplate.trim(),
         employeeFaceAttendanceEnabled: values.employeeFaceAttendanceEnabled !== false,
         employeeWorkSchedule: values.employeeWorkSchedule,
         removeLogo,
@@ -89,9 +77,6 @@ export function GeneralSettingsPage() {
             </Form.Item>
             <Form.Item name="receiptThankYou" label="To‘lov chekidagi rahmatnoma" rules={[{ required: true, whitespace: true, message: 'Rahmatnoma matnini kiriting' }]}><Input.TextArea rows={4} maxLength={500} showCount placeholder="Masalan: To‘lovingiz uchun rahmat!" /></Form.Item>
             <div className="receipt-preview"><span>Chekda ko‘rinishi</span><p>{receiptThankYou || 'Rahmatnoma matni'}</p></div>
-            <Form.Item name="debtorSmsTemplate" label="Qarzdorlik uchun SMS matni" rules={[{ required: true, whitespace: true, message: 'SMS matnini kiriting' }]}><Input.TextArea rows={5} maxLength={500} showCount placeholder={defaultDebtorSmsTemplate} /></Form.Item>
-            <div className="receipt-preview"><span>Talabaga shunday yuboriladi</span><p>{smsPreview(debtorSmsTemplate)}</p></div>
-            <div className="room-image-help">Faqat kerak bo‘lsa, matndagi {'{studentName}'}, {'{debtAmount}'} va {'{period}'} qismlarini o‘zgartirmang — ular avtomatik to‘ldiriladi.</div>
             <section className="general-employee-schedule">
               <div className="general-setting-section-title"><h3>Xodimlar FaceID va ish grafigi</h3><p>Bu grafik barcha faol xodimlar uchun bir xil ishlaydi.</p></div>
               <Form.Item name="employeeFaceAttendanceEnabled" valuePropName="checked"><Checkbox>FaceID orqali xodim kirish-chiqishi va davomati faol</Checkbox></Form.Item>

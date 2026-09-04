@@ -42,6 +42,7 @@ export function DebtorsPage({ currentEmployee }) {
   const [historyDebtor, setHistoryDebtor] = useState(null);
   const [actionDebtor, setActionDebtor] = useState(null);
   const [deadlineDebtor, setDeadlineDebtor] = useState(null);
+  const [smsDebtorId, setSmsDebtorId] = useState(null);
   const [deadlineForm] = Form.useForm();
   const [createPayment, { isLoading: creatingPayment }] =
     useCreatePaymentMutation();
@@ -135,9 +136,11 @@ export function DebtorsPage({ currentEmployee }) {
   };
   const sendSms = async (debtor) => {
     try {
+      setSmsDebtorId(debtor.student.id);
       await sendDebtorSms({ studentId: debtor.student.id, periodKey: period }).unwrap();
       toast.success(`SMS yuborildi (${(debtor.smsSentCount || 0) + 1}/3)`);
     } catch (requestError) { toast.error(apiErrorMessage(requestError)); }
+    finally { setSmsDebtorId(null); }
   };
 
   return (
@@ -360,7 +363,7 @@ export function DebtorsPage({ currentEmployee }) {
                             Batafsil
                           </button>
                           {isOwner && debtor.periods.length > 0 && <button className="debtor-deadline-btn" onClick={() => openDeadline(debtor)}>Deadline</button>}
-                          {isOwner && <button className="debtor-history-btn" disabled={sendingSms || debtor.smsSentCount >= 3} onClick={() => sendSms(debtor)} title={debtor.smsSentCount >= 3 ? 'SMS limiti tugagan' : 'Qarzdorlik SMSini yuborish'}>SMS ({debtor.smsSentCount || 0}/3)</button>}
+                          {isOwner && <button className="debtor-history-btn" disabled={sendingSms || debtor.smsSentCount >= 3} onClick={() => sendSms(debtor)} title={debtor.smsSentCount >= 3 ? 'SMS limiti tugagan' : 'Qarzdorlik SMSini yuborish'}>{smsDebtorId === debtor.student.id && <span className="debtor-btn-spinner" aria-hidden="true" />} {smsDebtorId === debtor.student.id ? 'Yuborilmoqda' : `SMS (${debtor.smsSentCount || 0}/3)`}</button>}
                           <button className="debtor-more-btn" aria-label="Amallar" onClick={() => setActionDebtor(actionDebtor?.student?.id === debtor.student.id ? null : debtor)}>⋯</button>
                           {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions">{(debtor.periods.length > 0 || debtor.depositDebt > 0) && <button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button>}<button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && debtor.periods.length > 0 && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
                         </div>

@@ -121,6 +121,7 @@
 .student-photo-field > small { display: block; margin-top: 8px; color: #81949b; }
 .student-form-actions { display: flex; gap: 8px; margin-top: 12px; }
 .student-submit-btn { color: #fff !important; background: #159988 !important; border-color: #0f766e !important; font-weight: 700; }
+.student-camera-select { width: 100%; margin-bottom: 10px; }
 .student-camera-view { display: grid; min-height: 340px; place-items: center; overflow: hidden; background: #12262d; border-radius: 10px; }
 .student-camera-view video { width: 100%; max-height: 440px; object-fit: contain; }
 .student-camera-view video.mirrored { transform: scaleX(-1); }

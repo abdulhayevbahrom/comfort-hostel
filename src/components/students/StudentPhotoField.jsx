@@ -8,6 +8,7 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
   const [activeFacing, setActiveFacing] = useState('environment')
   const [cameraDevices, setCameraDevices] = useState([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
+  const [activeDeviceId, setActiveDeviceId] = useState('')
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const hasPhoto = Boolean(fileList.length || (currentPhoto && !removed))
@@ -19,13 +20,55 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
       const mediaDevices = navigator.mediaDevices
       if (!mediaDevices?.getUserMedia) return setCameraError('Bu brauzer kameradan foydalanishni qo‘llab-quvvatlamaydi')
       setCameraError('')
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      if (videoRef.current) videoRef.current.srcObject = null
+
+      const getDevices = async () => {
+        try {
+          const devices = (await mediaDevices.enumerateDevices()).filter((device) => device.kind === 'videoinput')
+          setCameraDevices(devices)
+          return devices
+        } catch {
+          setCameraDevices([])
+          return []
+        }
+      }
+
+      const setStream = (stream, actualFacing = 'external') => {
+        const track = stream.getVideoTracks()[0]
+        streamRef.current = stream
+        setActiveFacing(track?.getSettings?.().facingMode || actualFacing)
+        setActiveDeviceId(track?.getSettings?.().deviceId || '')
+        if (videoRef.current) videoRef.current.srcObject = stream
+      }
+
+      if (selectedDeviceId) {
+        const attempts = [
+          { video: { deviceId: { exact: selectedDeviceId } }, audio: false },
+          { video: { deviceId: { ideal: selectedDeviceId } }, audio: false },
+        ]
+        for (const constraints of attempts) {
+          try {
+            const stream = await mediaDevices.getUserMedia(constraints)
+            if (cancelled) return stream.getTracks().forEach((track) => track.stop())
+            const devices = await getDevices()
+            const selectedDevice = devices.find((device) => device.deviceId === selectedDeviceId)
+            const actualFacing = /(front|user|facetime|integrated|built.?in)/i.test(selectedDevice?.label || '') ? 'user' : 'external'
+            setStream(stream, actualFacing)
+            return undefined
+          } catch {
+            // Keyingi constraint bilan urinib ko‘ramiz.
+          }
+        }
+        setActiveDeviceId('')
+        return setCameraError('Tanlangan kamera ochilmadi. Kamera boshqa dasturda ishlamayotganini va brauzer ruxsatini tekshiring.')
+      }
+
       const fallbackFacing = requestedFacing === 'environment' ? 'user' : 'environment'
       const attempts = [
-        ...(selectedDeviceId ? [{ video: { deviceId: { exact: selectedDeviceId } }, audio: false }] : []),
-        ...(selectedDeviceId ? [] : [
-          { video: { facingMode: { exact: requestedFacing } }, audio: false },
-          { video: { facingMode: { exact: fallbackFacing } }, audio: false },
-        ]),
+        { video: { facingMode: { exact: requestedFacing } }, audio: false },
+        { video: { facingMode: { exact: fallbackFacing } }, audio: false },
         { video: true, audio: false },
       ]
       for (let index = 0; index < attempts.length; index += 1) {
@@ -33,21 +76,10 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
           let stream = await mediaDevices.getUserMedia(attempts[index])
           if (cancelled) return stream.getTracks().forEach((track) => track.stop())
           let track = stream.getVideoTracks()[0]
-          let actualFacing = track?.getSettings?.().facingMode || (selectedDeviceId ? 'external' : (index === 0 ? requestedFacing : fallbackFacing))
-          let devices = []
+          let actualFacing = track?.getSettings?.().facingMode || (index === 0 ? requestedFacing : fallbackFacing)
+          const devices = await getDevices()
 
-          try {
-            devices = (await mediaDevices.enumerateDevices()).filter((device) => device.kind === 'videoinput')
-            setCameraDevices(devices)
-            if (selectedDeviceId && !track?.getSettings?.().facingMode) {
-              const selectedDevice = devices.find((device) => device.deviceId === selectedDeviceId)
-              actualFacing = /(front|user|facetime|integrated|built.?in)/i.test(selectedDevice?.label || '') ? 'user' : 'external'
-            }
-          } catch {
-            setCameraDevices([])
-          }
-
-          if (!selectedDeviceId && devices.length > 1) {
+          if (devices.length > 1) {
             const currentDeviceId = track?.getSettings?.().deviceId
             const externalCamera = devices.find((device) => /(usb|webcam|external|logitech|hd camera)/i.test(device.label) && !/(facetime|integrated|built.?in|front|back|rear|environment)/i.test(device.label))
             if (externalCamera && externalCamera.deviceId !== currentDeviceId) {
@@ -56,11 +88,10 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
               stream = externalStream
               track = stream.getVideoTracks()[0]
               actualFacing = track?.getSettings?.().facingMode || 'external'
-              setSelectedDeviceId(externalCamera.deviceId)
             }
           }
 
-          if (!selectedDeviceId && actualFacing === 'environment') {
+          if (actualFacing === 'environment') {
             try {
               const rearCameras = devices.filter((device) => device.kind === 'videoinput' && /(back|rear|environment)/i.test(device.label) && !/(ultra|0\.5|telephoto)/i.test(device.label))
               const mainCamera = rearCameras.find((device) => /^(back|rear)( camera)?$/i.test(device.label.trim())) || rearCameras.find((device) => /main/i.test(device.label))
@@ -82,9 +113,7 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
             }
           }
 
-          streamRef.current = stream
-          setActiveFacing(actualFacing)
-          if (videoRef.current) videoRef.current.srcObject = stream
+          setStream(stream, actualFacing)
           return undefined
         } catch {
           // Keyingi mavjud kamerani sinab ko‘ramiz.
@@ -125,14 +154,14 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
       <div className="student-photo-controls">
         {currentPhoto && !removed && !fileList.length && <div className="student-current-photo"><img src={currentPhoto.displayUrl || currentPhoto.url} alt="Talaba rasmi" /><button type="button" onClick={onRemoveCurrent}>×</button></div>}
         <Upload accept="image/jpeg,image/png,image/webp" listType="picture-card" fileList={fileList} maxCount={1} beforeUpload={() => false} onChange={({ fileList: items }) => onChange(items.slice(-1))}>{!hasPhoto ? <div className="student-upload-label"><b>+</b><span>{uploadLabel}</span></div> : null}</Upload>
-        {!hasPhoto && <button className="student-camera-btn" type="button" onClick={() => { setCameraError(''); setSelectedDeviceId(''); setRequestedFacing('environment'); setActiveFacing('environment'); setCameraOpen(true) }}><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4Z"/><circle cx="12" cy="13" r="4"/></svg>Kamera</button>}
+        {!hasPhoto && <button className="student-camera-btn" type="button" onClick={() => { setCameraError(''); setSelectedDeviceId(''); setActiveDeviceId(''); setRequestedFacing('environment'); setActiveFacing('environment'); setCameraOpen(true) }}><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4Z"/><circle cx="12" cy="13" r="4"/></svg>Kamera</button>}
       </div>
       <small>{description}</small>
       <Modal open={cameraOpen} onCancel={() => setCameraOpen(false)} footer={null} width={640} rootClassName="student-camera-modal" title="Kameradan suratga olish">
         {cameraDevices.length > 1 && (
           <Select
             className="student-camera-select"
-            value={selectedDeviceId || undefined}
+            value={selectedDeviceId || activeDeviceId || undefined}
             placeholder="Kamerani tanlang"
             options={cameraDevices.map((device, index) => ({ value: device.deviceId, label: device.label || `Kamera ${index + 1}` }))}
             onChange={(deviceId) => { setCameraError(''); setSelectedDeviceId(deviceId) }}

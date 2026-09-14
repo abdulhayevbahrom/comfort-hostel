@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import {
   Alert,
@@ -13,6 +13,7 @@ import {
   Segmented,
 } from "antd";
 import {
+  API_URL,
   useGetFacultiesQuery,
   useGetUniversitiesQuery,
   useLazyCheckStudentBlacklistQuery,
@@ -51,6 +52,32 @@ const initialValues = {
   zaks: "",
 };
 
+function PrivatePassportPreview({ studentId, side, label }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    if (!studentId) return undefined;
+    let objectUrl = "";
+    const controller = new AbortController();
+    const token = localStorage.getItem("hostelAuthToken");
+    fetch(`${API_URL}/students/${studentId}/passport-images/${side}`, {
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.blob() : null))
+      .then((blob) => {
+        if (!blob) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [studentId, side]);
+  return src ? <img src={src} alt={label} /> : <span>{label}</span>;
+}
+
 export function StudentFormModal({
   open,
   student,
@@ -64,7 +91,11 @@ export function StudentFormModal({
   const { data: facultyData } = useGetFacultiesQuery();
   const [photoFiles, setPhotoFiles] = useState([]);
   const [marriageCertificateFiles, setMarriageCertificateFiles] = useState([]);
+  const [passportFrontFiles, setPassportFrontFiles] = useState([]);
+  const [passportBackFiles, setPassportBackFiles] = useState([]);
   const [removePhoto, setRemovePhoto] = useState(false);
+  const [removePassportFront, setRemovePassportFront] = useState(false);
+  const [removePassportBack, setRemovePassportBack] = useState(false);
   const [blacklistWarning, setBlacklistWarning] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -115,7 +146,7 @@ export function StudentFormModal({
             passport: `${student.passportSeries || ""}${student.passportNumber || ""}`,
             zaks: `${student.zaksSeries || ""}${student.zaksNumber || ""}`,
             depositType: student.depositType || "none",
-            depositAmount: student.depositAmount || null,
+            depositAmount: student.depositType === "money" ? Math.max(Number(student.depositAmount || 0), 700000) : student.depositAmount || null,
             depositPaymentMethod: student.depositPaymentMethod || undefined,
             depositReceivedAt: student.depositReceivedAt
               ? dayjs(student.depositReceivedAt)
@@ -132,7 +163,11 @@ export function StudentFormModal({
     );
     setPhotoFiles([]);
     setMarriageCertificateFiles([]);
+    setPassportFrontFiles([]);
+    setPassportBackFiles([]);
     setRemovePhoto(false);
+    setRemovePassportFront(false);
+    setRemovePassportBack(false);
     setBlacklistWarning(null);
     setSubmitting(false);
     submittingRef.current = false;
@@ -206,7 +241,11 @@ export function StudentFormModal({
               },
               photoFiles,
               marriageCertificateFiles,
+              passportFrontFiles,
+              passportBackFiles,
               removePhoto,
+              removePassportFront,
+              removePassportBack,
             });
           } finally {
             submittingRef.current = false;
@@ -682,6 +721,62 @@ export function StudentFormModal({
             onRemoveCurrent={() => setRemovePhoto(true)}
           />
         </Form.Item>
+        <div className="student-identity-grid">
+          <Form.Item label="Pasport old tomoni">
+            <StudentPhotoField
+              currentPhoto={student?.passportImages?.front}
+              fileList={passportFrontFiles}
+              removed={removePassportFront}
+              uploadLabel="Rasm yuklash"
+              currentLabel="Old tomoni yuklangan"
+              currentPreview={
+                student?.passportImages?.front ? (
+                  <PrivatePassportPreview
+                    studentId={student.id}
+                    side="front"
+                    label="Old tomoni yuklangan"
+                  />
+                ) : null
+              }
+              showCurrentImage={false}
+              captureFilePrefix="passport-front"
+              maxSizeMb={2}
+              description="JPG, PNG yoki WEBP · maksimal 2 MB"
+              onChange={(files) => {
+                setPassportFrontFiles(files);
+                setRemovePassportFront(false);
+              }}
+              onRemoveCurrent={() => setRemovePassportFront(true)}
+            />
+          </Form.Item>
+          <Form.Item label="Pasport orqa tomoni">
+            <StudentPhotoField
+              currentPhoto={student?.passportImages?.back}
+              fileList={passportBackFiles}
+              removed={removePassportBack}
+              uploadLabel="Rasm yuklash"
+              currentLabel="Orqa tomoni yuklangan"
+              currentPreview={
+                student?.passportImages?.back ? (
+                  <PrivatePassportPreview
+                    studentId={student.id}
+                    side="back"
+                    label="Orqa tomoni yuklangan"
+                  />
+                ) : null
+              }
+              showCurrentImage={false}
+              captureFilePrefix="passport-back"
+              maxSizeMb={2}
+              description="JPG, PNG yoki WEBP · maksimal 2 MB"
+              onChange={(files) => {
+                setPassportBackFiles(files);
+                setRemovePassportBack(false);
+              }}
+              onRemoveCurrent={() => setRemovePassportBack(true)}
+            />
+          </Form.Item>
+        </div>
         {gender === "family" && (
           <Form.Item
             name="marriageCertificate"

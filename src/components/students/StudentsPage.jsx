@@ -8,6 +8,7 @@ import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
   useGetFacultiesQuery,
+  useGetGeneralSettingsQuery,
   useGetRoomsQuery,
   useGetStudentsQuery,
   useGetUniversitiesQuery,
@@ -18,7 +19,7 @@ import { StudentHistoryTab } from "./StudentHistoryTab";
 import "./Students.css";
 import "./StudentHistory.css";
 import "./StudentsTabsCompact.css";
-import { canEditOrDelete } from "../../utils/permissions";
+import { canManageStudents } from "../../utils/permissions";
 
 const studentStatusLabel = {
   green: "Qoladi",
@@ -59,13 +60,14 @@ function StudentsListTab({ currentEmployee }) {
   const { data: universityData } = useGetUniversitiesQuery();
   const { data: facultyData } = useGetFacultiesQuery();
   const { data: roomData } = useGetRoomsQuery();
+  const { data: settingsData } = useGetGeneralSettingsQuery();
   const [createStudent, { isLoading: creating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: updating }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: deleting }] = useDeleteStudentMutation();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
-  const canManage = canEditOrDelete(currentEmployee);
+  const canManage = canManageStudents(currentEmployee, settingsData?.settings);
   const students = useMemo(() => data?.students || [], [data?.students]);
   const pagination = data?.pagination || { page: 1, total: 0, limit: 25 };
   const universities = useMemo(
@@ -87,15 +89,19 @@ function StudentsListTab({ currentEmployee }) {
     setEditing(null);
     setError("");
   };
-  const submit = async ({ values, photoFiles, marriageCertificateFiles, removePhoto }) => {
+  const submit = async ({ values, photoFiles, marriageCertificateFiles, passportFrontFiles, passportBackFiles, removePhoto, removePassportFront, removePassportBack }) => {
     try {
       setError("");
       const body = new FormData();
-      body.append("payload", JSON.stringify({ ...values, removePhoto }));
+      body.append("payload", JSON.stringify({ ...values, removePhoto, removePassportFront, removePassportBack }));
       if (photoFiles[0]?.originFileObj)
         body.append("photo", photoFiles[0].originFileObj);
       if (marriageCertificateFiles[0]?.originFileObj)
         body.append("marriageCertificate", marriageCertificateFiles[0].originFileObj);
+      if (passportFrontFiles[0]?.originFileObj)
+        body.append("passportFront", passportFrontFiles[0].originFileObj);
+      if (passportBackFiles[0]?.originFileObj)
+        body.append("passportBack", passportBackFiles[0].originFileObj);
       if (editing) await updateStudent({ id: editing.id, body }).unwrap();
       else await createStudent(body).unwrap();
       toast.success(editing ? "Talaba yangilandi" : "Talaba qo‘shildi");
@@ -245,6 +251,7 @@ function StudentsListTab({ currentEmployee }) {
               <table className="students-table">
                 <thead>
                   <tr>
+                    <th className="students-row-number">№</th>
                     <th>Talaba</th>
                     <th>Holati</th>
                     <th>Soliq hujjat</th>
@@ -258,11 +265,12 @@ function StudentsListTab({ currentEmployee }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((student) => {
+                  {students.map((student, index) => {
                     const status = student.studentStatus || "green";
                     const roomWithBeds = rooms.find((room) => room.id === student.activeRoom?.id);
                     const assignedBed = roomWithBeds?.beds?.find((bed) => Number(bed.number) === Number(student.activeRoom?.bedNumber));
                     const bedType = assignedBed?.level === "single" ? "[1]" : assignedBed?.level === "lower" ? "[2.1]" : assignedBed?.level === "upper" ? "[2.2]" : student.activeRoom?.bedType || "";
+                    const rowNumber = (Number(pagination.page || 1) - 1) * Number(pagination.limit || students.length || 0) + index + 1;
                     return (
                       <tr
                         key={student.id}
@@ -271,6 +279,9 @@ function StudentsListTab({ currentEmployee }) {
                           isContractExpiringWithinTwoDays(student.activeContractEndDate) ? "student-row-contract-expiring" : "",
                         ].filter(Boolean).join(" ")}
                       >
+                        <td className="students-row-number" data-label="№">
+                          {rowNumber}
+                        </td>
                         <td data-label="Talaba">
                           <div className="student-person">
                             {student.photo ? (
@@ -409,7 +420,7 @@ function StudentsListTab({ currentEmployee }) {
                   })}
                   {!students.length && (
                     <tr>
-                      <td className="students-empty" colSpan={10}>
+                      <td className="students-empty" colSpan={11}>
                         Talabalar topilmadi
                       </td>
                     </tr>

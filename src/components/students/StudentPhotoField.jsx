@@ -1,7 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { Modal, Select, Upload } from 'antd'
+import { message, Modal, Select, Upload } from 'antd'
 
-export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, onRemoveCurrent, uploadLabel = 'Rasm tanlash', description = 'Aniq yuz rasmi, yaxshi yoritish, neytral ifoda · maksimal 5 MB' }) {
+export function StudentPhotoField({
+  currentPhoto,
+  fileList,
+  removed,
+  onChange,
+  onRemoveCurrent,
+  uploadLabel = 'Rasm tanlash',
+  description = 'Aniq yuz rasmi, yaxshi yoritish, neytral ifoda · maksimal 5 MB',
+  currentLabel = 'Rasm yuklangan',
+  currentPreview = null,
+  showCurrentImage = true,
+  captureFilePrefix = 'student',
+  maxSizeMb = 5,
+}) {
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const [requestedFacing, setRequestedFacing] = useState('environment')
@@ -143,17 +156,29 @@ export function StudentPhotoField({ currentPhoto, fileList, removed, onChange, o
     context.drawImage(video, 0, 0)
     canvas.toBlob((blob) => {
       if (!blob) return
-      const file = new File([blob], `student-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      if (maxSizeMb && blob.size > maxSizeMb * 1024 * 1024) {
+        setCameraError(`Rasm hajmi ${maxSizeMb} MB dan oshmasin`)
+        return
+      }
+      const file = new File([blob], `${captureFilePrefix}-${Date.now()}.jpg`, { type: 'image/jpeg' })
       onChange([{ uid: String(Date.now()), name: file.name, status: 'done', originFileObj: file, thumbUrl: URL.createObjectURL(blob) }])
       setCameraOpen(false)
     }, 'image/jpeg', .9)
   }
 
+  const beforeUpload = (file) => {
+    if (maxSizeMb && file.size > maxSizeMb * 1024 * 1024) {
+      message.error(`Rasm hajmi ${maxSizeMb} MB dan oshmasin`)
+      return Upload.LIST_IGNORE
+    }
+    return false
+  }
+
   return (
     <div className="student-photo-field">
       <div className="student-photo-controls">
-        {currentPhoto && !removed && !fileList.length && <div className="student-current-photo"><img src={currentPhoto.displayUrl || currentPhoto.url} alt="Talaba rasmi" /><button type="button" onClick={onRemoveCurrent}>×</button></div>}
-        <Upload accept="image/jpeg,image/png,image/webp" listType="picture-card" fileList={fileList} maxCount={1} beforeUpload={() => false} onChange={({ fileList: items }) => onChange(items.slice(-1))}>{!hasPhoto ? <div className="student-upload-label"><b>+</b><span>{uploadLabel}</span></div> : null}</Upload>
+        {currentPhoto && !removed && !fileList.length && <div className="student-current-photo">{currentPreview || (showCurrentImage ? <img src={currentPhoto.displayUrl || currentPhoto.url} alt={currentLabel} /> : <span>{currentLabel}</span>)}<button type="button" onClick={onRemoveCurrent}>×</button></div>}
+        <Upload accept="image/jpeg,image/png,image/webp" listType="picture-card" fileList={fileList} maxCount={1} beforeUpload={beforeUpload} onChange={({ fileList: items }) => onChange(items.slice(-1))}>{!hasPhoto ? <div className="student-upload-label"><b>+</b><span>{uploadLabel}</span></div> : null}</Upload>
         {!hasPhoto && <button className="student-camera-btn" type="button" onClick={() => { setCameraError(''); setSelectedDeviceId(''); setActiveDeviceId(''); setRequestedFacing('environment'); setActiveFacing('environment'); setCameraOpen(true) }}><svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4Z"/><circle cx="12" cy="13" r="4"/></svg>Kamera</button>}
       </div>
       <small>{description}</small>

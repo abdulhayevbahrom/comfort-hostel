@@ -19,6 +19,7 @@
 .students-table { width: 100%; border-collapse: collapse; }
 .students-table th, .students-table td { padding: 7px 8px; color: #3b4e56; border-bottom: 1px solid #e3ecee; font-size: 13px; text-align: left; vertical-align: middle; }
 .students-table th { color: #365b67; background: #f4f9f9; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.students-row-number { width: 44px; color: #789096 !important; text-align: center !important; font-weight: 800; }
 .students-table tbody tr:hover td { background: #f8fcfb; }
 .students-table tbody .student-row-blacklisted td, .students-table tbody .student-row-blacklisted:hover td { background: #fff0f1; border-bottom-color: #efb3b8; }
 .students-table tbody .student-row-blacklisted td:first-child { border-left: 3px solid #d93645; }
@@ -155,6 +156,7 @@
   .students-table tbody { display: grid; gap: 10px; }
   .students-table tr { display: block; padding: 10px; background: #fbfefe; border: 1px solid #d8e5e8; border-radius: 10px; box-shadow: 0 3px 10px rgba(15, 76, 92, .04); }
   .students-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border: 0; border-bottom: 1px solid #e6eeef; }
+  .students-table .students-row-number { width: 100%; text-align: right !important; }
   .students-table td:first-child { padding-top: 0; }
   .students-table td:last-child { padding-bottom: 0; border-bottom: 0; }
   .students-table td::before { content: attr(data-label); display: flex; flex: 0 0 96px; align-items: center; color: #37616c; font-size: 10px; font-weight: 800; line-height: 1.25; text-transform: uppercase; white-space: nowrap; }

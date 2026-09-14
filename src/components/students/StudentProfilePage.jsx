@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Image, Popconfirm, Tabs } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
 import {
   apiErrorMessage,
+  API_URL,
   useDeleteStudentMutation,
   useGetGeneralSettingsQuery,
   useGetStudentQuery,
@@ -18,7 +19,7 @@ import { StudentFinesTab } from "./StudentFinesTab";
 import "./StudentProfile.css";
 import "./StudentFines.css";
 import "./StudentFinesLayout.css";
-import { canEditOrDelete } from "../../utils/permissions";
+import { canManageStudents } from "../../utils/permissions";
 import { PaymentPrintIcon } from "../payments/PaymentReceiptModal";
 import { printDepositReceipt } from "../payments/depositReceipt";
 
@@ -34,6 +35,28 @@ function ProfileItem({ label, value }) {
   );
 }
 
+function PrivateStudentImage({ studentId, side, label }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let objectUrl = "";
+    const controller = new AbortController();
+    const token = localStorage.getItem("hostelAuthToken");
+    fetch(`${API_URL}/students/${studentId}/passport-images/${side}`, { headers: token ? { authorization: `Bearer ${token}` } : {}, signal: controller.signal })
+      .then((response) => response.ok ? response.blob() : null)
+      .then((blob) => {
+        if (!blob) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [studentId, side]);
+  return src ? <Image width={96} src={src} alt={label} preview={{ mask: "Ko‘rish" }} /> : "Yuklangan";
+}
+
 export function StudentProfilePage({ currentEmployee }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,20 +68,25 @@ export function StudentProfilePage({ currentEmployee }) {
   const [editOpen, setEditOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const student = data?.student;
-  const canManage = canEditOrDelete(currentEmployee);
+  const canManage = canManageStudents(currentEmployee, settingsData?.settings);
   const depositPayments = student?.depositPayments?.length ? student.depositPayments : student?.depositType === "money" && student.depositAmount ? [{ id: `legacy-${student.id}`, amount: student.depositAmount, method: student.depositPaymentMethod || "cash", paidAt: student.depositReceivedAt }] : [];
-  const depositPaid = depositPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const depositPaid = depositPayments.filter((payment) => payment.status !== "cancelled" && !payment.cancelledAt).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const depositRequired = student?.depositType === "money" ? Math.max(Number(student.depositAmount || 0), 700000) : 0;
   const printStudentDepositReceipt = () => printDepositReceipt(student, depositPayments, settingsData?.settings);
 
-  const update = async ({ values, photoFiles, marriageCertificateFiles, removePhoto }) => {
+  const update = async ({ values, photoFiles, marriageCertificateFiles, passportFrontFiles, passportBackFiles, removePhoto, removePassportFront, removePassportBack }) => {
     try {
       setFormError("");
       const body = new FormData();
-      body.append("payload", JSON.stringify({ ...values, removePhoto }));
+      body.append("payload", JSON.stringify({ ...values, removePhoto, removePassportFront, removePassportBack }));
       if (photoFiles[0]?.originFileObj)
         body.append("photo", photoFiles[0].originFileObj);
       if (marriageCertificateFiles[0]?.originFileObj)
         body.append("marriageCertificate", marriageCertificateFiles[0].originFileObj);
+      if (passportFrontFiles[0]?.originFileObj)
+        body.append("passportFront", passportFrontFiles[0].originFileObj);
+      if (passportBackFiles[0]?.originFileObj)
+        body.append("passportBack", passportBackFiles[0].originFileObj);
       await updateStudent({ id, body }).unwrap();
       toast.success("Talaba yangilandi");
       setEditOpen(false);
@@ -214,6 +242,14 @@ export function StudentProfilePage({ currentEmployee }) {
                         label="Pasport (ID karta)"
                         value={student.passportSeries && student.passportNumber ? `${student.passportSeries} ${student.passportNumber}` : "—"}
                       />
+                      <ProfileItem
+                        label="Pasport old rasmi"
+                        value={student.passportImages?.front ? <PrivateStudentImage studentId={student.id} side="front" label="Pasport old tomoni" /> : "—"}
+                      />
+                      <ProfileItem
+                        label="Pasport orqa rasmi"
+                        value={student.passportImages?.back ? <PrivateStudentImage studentId={student.id} side="back" label="Pasport orqa tomoni" /> : "—"}
+                      />
                       {student.gender === "family" && <ProfileItem
                         label="ZAKS seriyasi va raqami"
                         value={student.zaksSeries && student.zaksNumber ? `${student.zaksSeries} ${student.zaksNumber}` : "—"}
@@ -228,7 +264,7 @@ export function StudentProfilePage({ currentEmployee }) {
                     <h3>Depozit</h3>
                     <div className="student-profile-grid student-deposit-grid">
                       <ProfileItem label="Depozit turi" value={student.depositType === "money" ? "Pul" : student.depositType === "passport" ? "Pasport" : "Depozit qo‘yilmagan"} />
-                      {student.depositType === "money" && <><ProfileItem label="Depozit summasi" value={money(student.depositAmount)} /><ProfileItem label="To‘langan" value={money(depositPaid)} /><ProfileItem label="Depozit qarzi" value={money(Math.max(0, Number(student.depositAmount || 0) - depositPaid))} /></>}
+                      {student.depositType === "money" && <><ProfileItem label="Depozit summasi" value={money(depositRequired)} /><ProfileItem label="To‘langan" value={money(depositPaid)} /><ProfileItem label="Depozit qarzi" value={money(Math.max(0, depositRequired - depositPaid))} /></>}
                       {student.depositType !== "none" && <ProfileItem label="Depozit olingan sana" value={student.depositReceivedAt ? new Date(student.depositReceivedAt).toLocaleDateString("uz-UZ") : "—"} />}
                       {student.depositReturnedAt && <ProfileItem label="Depozit qaytarilgan sana" value={new Date(student.depositReturnedAt).toLocaleDateString("uz-UZ")} />}
                     </div>

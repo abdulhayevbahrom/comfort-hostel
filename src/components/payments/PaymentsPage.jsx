@@ -16,6 +16,7 @@ import {
   apiErrorMessage,
   useCreatePaymentMutation,
   useCreateDepositPaymentMutation,
+  useDeleteDepositPaymentMutation,
   useDeletePaymentMutation,
   useGetGeneralSettingsQuery,
   useGetPaymentOptionsQuery,
@@ -54,6 +55,7 @@ export function PaymentsPage({ currentEmployee }) {
   const { data: settingsData } = useGetGeneralSettingsQuery();
   const [createPayment, { isLoading: saving }] = useCreatePaymentMutation();
   const [createDepositPayment, { isLoading: savingDeposit }] = useCreateDepositPaymentMutation();
+  const [deleteDepositPayment, { isLoading: deletingDeposit }] = useDeleteDepositPaymentMutation();
   const [updatePayment, { isLoading: updating }] = useUpdatePaymentMutation();
   const [deletePayment, { isLoading: deleting }] = useDeletePaymentMutation();
   const selectedContractId = Form.useWatch("contract", form);
@@ -145,9 +147,13 @@ export function PaymentsPage({ currentEmployee }) {
       toast.error(apiErrorMessage(requestError));
     }
   };
-  const remove = async (id) => {
+  const remove = async (payment) => {
     try {
-      await deletePayment(id).unwrap();
+      const ids = payment.sourcePaymentIds?.length ? payment.sourcePaymentIds : [payment.id];
+      for (const id of ids) {
+        if (payment.isDeposit) await deleteDepositPayment({ studentId: payment.student?.id, paymentId: id }).unwrap();
+        else await deletePayment(id).unwrap();
+      }
       toast.success("To‘lov bekor qilindi");
     } catch (requestError) {
       toast.error(apiErrorMessage(requestError));
@@ -342,12 +348,12 @@ export function PaymentsPage({ currentEmployee }) {
                         >
                           <PaymentPrintIcon />
                         </button>
-                        {!payment.isDeposit && !payment.isGrouped && <button className="payment-history" title="Amallar tarixi" aria-label="To‘lov amallari tarixini ko‘rish" onClick={() => setHistoryPayment(payment)}>
+                        {!payment.isGrouped && <button className="payment-history" title="Amallar tarixi" aria-label="To‘lov amallari tarixini ko‘rish" onClick={() => setHistoryPayment(payment)}>
                           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5l3 2M4.5 9A8 8 0 1 1 4 12M4 5v4h4" /></svg>
                         </button>}
-                        {isOwner && !payment.isDeposit && payment.status !== "cancelled" && !payment.isGrouped && (
+                        {isOwner && payment.status !== "cancelled" && (
                           <>
-                            <button
+                            {!payment.isDeposit && !payment.isGrouped && <button
                               className="payment-edit"
                               title="Tahrirlash"
                               aria-label="To‘lovni tahrirlash"
@@ -357,7 +363,7 @@ export function PaymentsPage({ currentEmployee }) {
                                 <path d="M4 20h4l11-11-4-4L4 16v4Z" />
                                 <path d="m13.5 6.5 4 4M4 20h16" />
                               </svg>
-                            </button>
+                            </button>}
                             <Popconfirm
                               title="To‘lovni bekor qilish"
                               description="Summa qarzdorlikka qaytariladi. Davom etasizmi?"
@@ -365,9 +371,9 @@ export function PaymentsPage({ currentEmployee }) {
                               cancelText="Yo‘q"
                               okButtonProps={{
                                 danger: true,
-                                loading: deleting,
+                                loading: deleting || deletingDeposit,
                               }}
-                              onConfirm={() => remove(payment.id)}
+                              onConfirm={() => remove(payment)}
                             >
                               <button
                                 className="payment-delete"
@@ -449,7 +455,7 @@ export function PaymentsPage({ currentEmployee }) {
           {!editingPayment && <Form.Item name="paymentKind" label="To‘lov yo‘nalishi"><Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi" }, { value: "deposit", label: "Depozit to‘lovi" }]} /></Form.Item>}
           {paymentKind === "deposit" && !editingPayment && <>
             <Form.Item name="student" label="Talaba" rules={[{ required: true, message: "Talabani tanlang" }]}><Select showSearch loading={optionsLoading} optionFilterProp="label" placeholder="Talabani qidiring" options={depositStudents.map((item) => ({ value: item._id, label: `${item.fullName} — ${money(item.balance)} depozit qarzi` }))} /></Form.Item>
-            {selectedDepositStudent && <div className="selected-contract"><div><small>Talaba</small><b>{selectedDepositStudent.fullName}</b></div><div><small>Depozit summasi</small><b>{money(selectedDepositStudent.depositAmount || 700000)}</b></div><div><small>Qoldiq</small><b>{money(selectedDepositStudent.balance)}</b></div></div>}
+            {selectedDepositStudent && <div className="selected-contract"><div><small>Talaba</small><b>{selectedDepositStudent.fullName}</b></div><div><small>Depozit summasi</small><b>{money(Math.max(Number(selectedDepositStudent.depositAmount || 0), 700000))}</b></div><div><small>Qoldiq</small><b>{money(selectedDepositStudent.balance)}</b></div></div>}
           </>}
           {(paymentKind === "contract" || editingPayment) && <>
           <Form.Item

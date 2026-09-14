@@ -292,7 +292,7 @@ export const baseApi = createApi({
     updateStudent: builder.mutation({
       query: ({ id, body }) => ({ url: `/students/${id}`, method: 'PUT', body }),
       transformResponse: (response) => response.data,
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Student', id }, { type: 'Student', id: 'LIST' }],
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Student', id }, { type: 'Student', id: 'LIST' }, { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
     }),
     returnStudentDeposit: builder.mutation({
       query: (id) => ({ url: `/students/${id}/deposit-return`, method: 'POST' }),
@@ -539,6 +539,11 @@ export const baseApi = createApi({
     }),
     createDepositPayment: builder.mutation({
       query: ({ studentId, paymentParts }) => ({ url: `/students/${studentId}/deposit-payments`, method: 'POST', body: { paymentParts } }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: (_result, _error, { studentId }) => [{ type: 'Student', id: 'LIST' }, { type: 'Student', id: studentId }, { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: `STUDENT-${studentId}` }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
+    }),
+    deleteDepositPayment: builder.mutation({
+      query: ({ studentId, paymentId }) => ({ url: `/students/${studentId}/deposit-payments/${paymentId}`, method: 'DELETE' }),
       transformResponse: (response) => response.data,
       invalidatesTags: (_result, _error, { studentId }) => [{ type: 'Student', id: 'LIST' }, { type: 'Student', id: studentId }, { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: `STUDENT-${studentId}` }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
     }),
@@ -814,6 +819,7 @@ export const {
   useDeleteFineMutation,
   useCreatePaymentMutation,
   useCreateDepositPaymentMutation,
+  useDeleteDepositPaymentMutation,
   useDeletePaymentMutation,
   useUpdatePaymentMutation,
   useGetUniversitiesQuery,

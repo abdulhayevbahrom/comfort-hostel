@@ -6,7 +6,7 @@ import './SettingsPages.css'
 
 const workDayOptions = [{ label: 'Du', value: 1 }, { label: 'Se', value: 2 }, { label: 'Ch', value: 3 }, { label: 'Pa', value: 4 }, { label: 'Ju', value: 5 }, { label: 'Sh', value: 6 }, { label: 'Ya', value: 0 }]
 
-export function GeneralSettingsPage() {
+export function GeneralSettingsPage({ currentEmployee }) {
   const [form] = Form.useForm()
   const { data, isLoading, error: loadError } = useGetGeneralSettingsQuery()
   const [updateSettings, { isLoading: saving }] = useUpdateGeneralSettingsMutation()
@@ -14,6 +14,7 @@ export function GeneralSettingsPage() {
   const [removeLogo, setRemoveLogo] = useState(false)
   const [error, setError] = useState('')
   const settings = data?.settings
+  const canControlStudentManagePermission = ['owner', 'admin'].includes(currentEmployee?.role)
   const receiptThankYou = Form.useWatch('receiptThankYou', form)
   const useTimePenalty = Form.useWatch(['employeeWorkSchedule', 'useTimePenalty'], form)
 
@@ -25,6 +26,7 @@ export function GeneralSettingsPage() {
       organizationAddress: settings.organizationAddress,
       receiptThankYou: settings.receiptThankYou,
       employeeFaceAttendanceEnabled: settings.employeeFaceAttendanceEnabled !== false,
+      cashierStudentManageEnabled: settings.cashierStudentManageEnabled === true,
       employeeWorkSchedule: {
         checkInTime: settings.employeeWorkSchedule?.checkInTime || '09:00',
         checkOutTime: settings.employeeWorkSchedule?.checkOutTime || '18:00',
@@ -48,6 +50,7 @@ export function GeneralSettingsPage() {
         organizationAddress: values.organizationAddress.trim(),
         receiptThankYou: values.receiptThankYou.trim(),
         employeeFaceAttendanceEnabled: values.employeeFaceAttendanceEnabled !== false,
+        cashierStudentManageEnabled: values.cashierStudentManageEnabled === true,
         employeeWorkSchedule: values.employeeWorkSchedule,
         removeLogo,
       }))
@@ -77,6 +80,10 @@ export function GeneralSettingsPage() {
             </Form.Item>
             <Form.Item name="receiptThankYou" label="To‘lov chekidagi rahmatnoma" rules={[{ required: true, whitespace: true, message: 'Rahmatnoma matnini kiriting' }]}><Input.TextArea rows={4} maxLength={500} showCount placeholder="Masalan: To‘lovingiz uchun rahmat!" /></Form.Item>
             <div className="receipt-preview"><span>Chekda ko‘rinishi</span><p>{receiptThankYou || 'Rahmatnoma matni'}</p></div>
+            {canControlStudentManagePermission && <section className="general-employee-schedule">
+              <div className="general-setting-section-title"><h3>Talabalar bo‘limi ruxsatlari</h3><p>Owner kerakli paytda kassirlarga talaba kartasini tahrirlash yoki o‘chirish imkonini ochib-yopadi.</p></div>
+              <Form.Item name="cashierStudentManageEnabled" valuePropName="checked"><Checkbox>Kassir va bosh kassir talabani tahrirlashi/o‘chirishi mumkin</Checkbox></Form.Item>
+            </section>}
             <section className="general-employee-schedule">
               <div className="general-setting-section-title"><h3>Xodimlar FaceID va ish grafigi</h3><p>Bu grafik barcha faol xodimlar uchun bir xil ishlaydi.</p></div>
               <Form.Item name="employeeFaceAttendanceEnabled" valuePropName="checked"><Checkbox>FaceID orqali xodim kirish-chiqishi va davomati faol</Checkbox></Form.Item>

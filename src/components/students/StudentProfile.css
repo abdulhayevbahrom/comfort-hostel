@@ -142,6 +142,20 @@
 .student-deposit-receipts button { display: flex; min-height: 38px; align-items: center; gap: 7px; padding: 8px 12px; color: #155e75; background: #edf8f6; border: 1px solid #c8e3df; border-radius: 9px; font-weight: 700; }
 .student-deposit-receipts svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; }
 .student-deposit-return { min-height: 38px; padding: 0 16px; color: #fff; background: #159988; border: 1px solid #0f766e; border-radius: 9px; font-weight: 800; white-space: nowrap; }
+.student-audit-tab { display: grid; gap: 10px; padding: 18px 24px 24px; }
+.student-audit-empty { padding: 45px 20px; color: #81949b; text-align: center; }
+.student-audit-card { overflow: hidden; background: #fff; border: 1px solid #dce8ea; border-radius: 10px; }
+.student-audit-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #f4faf9; border-bottom: 1px solid #dce8ea; }
+.student-audit-head strong { display: block; color: #284955; font-size: 14px; }
+.student-audit-head span, .student-audit-head time { color: #70858d; font-size: 12px; font-weight: 650; }
+.student-audit-head time { white-space: nowrap; }
+.student-audit-changes { display: grid; }
+.student-audit-change { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; padding: 10px 14px; border-bottom: 1px solid #edf2f3; }
+.student-audit-change:last-child { border-bottom: 0; }
+.student-audit-change span { color: #54717a; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.student-audit-change p { display: flex; min-width: 0; align-items: center; gap: 9px; margin: 0; color: #2d4650; }
+.student-audit-change b { min-width: 0; overflow-wrap: anywhere; font-weight: 650; }
+.student-audit-change i { color: #81949b; font-style: normal; }
 @media (max-width: 1200px) { .student-deposit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) {
   .student-profile-toolbar { align-items: stretch; }
@@ -173,6 +187,12 @@
   .student-profile-tabs > .ant-tabs-nav .ant-tabs-nav-list { flex-wrap: nowrap; width: max-content; min-width: 100%; }
   .student-profile-tabs > .ant-tabs-nav .ant-tabs-tab { flex: 0 0 auto; }
   .student-contracts-tab { padding: 14px; }
+  .student-audit-tab { padding: 14px; }
+  .student-audit-head { align-items: stretch; flex-direction: column; gap: 4px; }
+  .student-audit-head time { white-space: normal; }
+  .student-audit-change { grid-template-columns: 1fr; gap: 5px; padding: 9px 11px; }
+  .student-audit-change p { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .student-audit-change i { display: none; }
   .contract-room-picker button { width: 135px; max-width: 100%; min-width: 0; }
   .student-contract-stats { grid-template-columns: 1fr; gap: 8px; }
   .student-contract-stats article { min-height: 0; gap: 4px; padding: 11px 12px; }

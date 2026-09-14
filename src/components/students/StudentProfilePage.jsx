@@ -24,7 +24,39 @@ import { PaymentPrintIcon } from "../payments/PaymentReceiptModal";
 import { printDepositReceipt } from "../payments/depositReceipt";
 
 const genderLabel = { male: "O‘g‘il bola", female: "Qiz bola", family: "Oila", guest: "Mehmon" };
+const auditValueLabels = {
+  gender: genderLabel,
+  educationType: { daytime: "Kunduzgi ta’lim", evening: "Kechki ta’lim", extramural: "Sirtqi ta’lim", employed: "Ishlaydi" },
+  depositType: { none: "Depozit qo‘yilmagan", money: "Pul", passport: "Pasport" },
+  depositPaymentMethod: { cash: "Naqd", online: "Click", card: "Karta", bank: "Bank" },
+  studentStatus: { green: "Qoladi", warning: "50/50", red: "Ketadi" },
+  taxContractType: { student_contract: "Talaba shartnomasi", standard_contract: "Oddiy shartnoma" },
+  disciplinaryStatus: { clear: "Muammo yo‘q", monitoring: "Nazoratda", blacklisted: "Qora ro‘yxatda" },
+  disabilityStatus: { none: "Yo‘q", has_disability: "Mavjud" },
+  hasTemporaryRegistration: { Ha: "Qilingan", "Yo‘q": "Qilinmagan" },
+  hasTaxContract: { Ha: "Mavjud", "Yo‘q": "Mavjud emas" },
+};
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
+const roleLabel = { owner: "Owner", admin: "Admin", manager: "Manager", head_cashier: "Bosh kassir", cashier: "Kassir", employee: "Xodim" };
+
+const employeeName = (employee) => {
+  if (!employee) return "Noma’lum";
+  const name = [employee.firstname, employee.lastname].filter(Boolean).join(" ").trim();
+  return name || roleLabel[employee.role] || employee.position || "Noma’lum";
+};
+
+const auditDate = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleString("uz-UZ", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+const auditValue = (field, value) => {
+  const text = value === undefined || value === null || value === "" ? "—" : String(value);
+  return auditValueLabels[field]?.[text] || text;
+};
 
 function ProfileItem({ label, value }) {
   return (
@@ -55,6 +87,34 @@ function PrivateStudentImage({ studentId, side, label }) {
     };
   }, [studentId, side]);
   return src ? <Image width={96} src={src} alt={label} preview={{ mask: "Ko‘rish" }} /> : "Yuklangan";
+}
+
+function StudentAuditTab({ auditHistory = [] }) {
+  const rows = [...auditHistory].sort((first, second) => new Date(second.performedAt || 0) - new Date(first.performedAt || 0));
+  if (!rows.length) return <div className="student-audit-empty">Hali o‘zgarishlar tarixi yo‘q</div>;
+  return (
+    <div className="student-audit-tab">
+      {rows.map((item) => (
+        <article className="student-audit-card" key={item.id || item._id || `${item.performedAt}-${item.title}`}>
+          <div className="student-audit-head">
+            <div>
+              <strong>{item.title || "Ma’lumot yangilandi"}</strong>
+              <span>{employeeName(item.performedBy)} · {roleLabel[item.performedBy?.role] || item.performedBy?.role || "Xodim"}</span>
+            </div>
+            <time>{auditDate(item.performedAt)}</time>
+          </div>
+          <div className="student-audit-changes">
+            {(item.changes || []).map((change, index) => (
+              <div className="student-audit-change" key={`${change.field}-${index}`}>
+                <span>{change.label}</span>
+                <p><b>{auditValue(change.field, change.before)}</b><i>→</i><b>{auditValue(change.field, change.after)}</b></p>
+              </div>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export function StudentProfilePage({ currentEmployee }) {
@@ -362,6 +422,11 @@ export function StudentProfilePage({ currentEmployee }) {
               key: "fines",
               label: "Jarimalar",
               children: <StudentFinesTab student={student} />,
+            },
+            {
+              key: "audit",
+              label: "O‘zgarishlar",
+              children: <StudentAuditTab auditHistory={student.auditHistory} />,
             },
           ]}
         />

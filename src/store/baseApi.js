@@ -334,7 +334,7 @@ export const baseApi = createApi({
     }),
     updateStudentContract: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/student-contracts/${id}`, method: 'PUT', body }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'StudentContract', id }, { type: 'StudentContract', id: 'LIST' }, { type: 'StudentContract', id: 'ACTIVE' }, { type: 'StudentContract', id: 'HISTORY' }, { type: 'Student', id: 'LIST' }, { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
+      invalidatesTags: (_result, _error, { id, student }) => [{ type: 'StudentContract', id }, { type: 'StudentContract', id: 'LIST' }, { type: 'StudentContract', id: 'ACTIVE' }, { type: 'StudentContract', id: 'HISTORY' }, { type: 'Student', id: 'LIST' }, ...(student ? [{ type: 'Student', id: student }] : []), { type: 'Payment', id: 'LIST' }, { type: 'Payment', id: 'OPTIONS' }, { type: 'Debtor', id: 'LIST' }],
     }),
     deleteStudentContract: builder.mutation({
       query: (id) => ({ url: `/student-contracts/${id}`, method: 'DELETE' }),

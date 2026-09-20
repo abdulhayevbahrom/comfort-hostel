@@ -290,6 +290,8 @@
 .payment-method-breakdown .method-badge { white-space: nowrap; }
 /* Ko‘p sahifali shartnoma namunasi: har bir varaq A4 o‘lchamida. */
 .contract-pages { display: grid; gap: 16px; width: 210mm; max-width: 100%; margin: 0 auto; }
+.contract-pagination-measure { position: absolute; left: -300mm; width: 210mm; max-width: none; visibility: hidden; pointer-events: none; }
+.contract-pagination-measure .contract-a4 { height: auto; min-height: 297mm; overflow: visible; }
 .contract-pages .contract-a4 { width: 210mm; height: 297mm; min-height: 297mm; padding: 14mm 17mm; margin: 0; overflow: hidden; font-size: 14px; font-weight: 400; line-height: 1.28; }
 .contract-pages .contract-a4 b, .contract-pages .contract-a4 strong { font-weight: 400; }
 .contract-pages .contract-document-identifiers { display: flex; justify-content: space-between; gap: 14px; margin: 8px 0 5px; font-size: 13px; }
@@ -306,6 +308,9 @@
 .contract-pages .contract-a4 section { margin-top: 17px; break-inside: auto; }
 .contract-pages .contract-a4 section h3 { margin-bottom: 12px; font-size: 15px; text-align: center; }
 .contract-pages .contract-a4 p { margin: 5px 0; text-align: left; }
+.contract-pages .contract-document-header p,
+.contract-pages .contract-a4 .contract-intro { text-align: center; }
+.contract-pages .contract-a4 .contract-intro { font-weight: 700; }
 .contract-pages .contract-consent-sign { margin-top: 24px !important; text-align: right !important; }
 .contract-pages .contract-requisites { margin-top: 32px !important; }
 .contract-pages .contract-requisites > div { gap: 20px; }
@@ -318,6 +323,7 @@
 .contract-pages .contract-director-sign { margin-top: 28px !important; text-align: right !important; }
 .contract-download-source .contract-pages { max-width: none; gap: 0; }
 .contract-download-source .contract-pages .contract-a4 { width: 210mm; height: 297mm; min-height: 297mm; padding: 14mm 17mm; font-size: 14px; font-weight: 400; line-height: 1.28; }
+.contract-download-source .contract-pagination-measure .contract-a4 { height: auto; overflow: visible; }
 @media (max-width: 768px) {
   .contract-a4-scroll { overflow-x: auto; }
   .contract-pages { max-width: none; }

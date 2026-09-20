@@ -1,4 +1,4 @@
-import { forwardRef, useEffect } from "react";
+import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import dayjs from "dayjs";
 import { entryRules, paymentRules, duties, prohibitions, safety, penalties, emergency, contacts, reminders } from './contractRules';
@@ -12,7 +12,7 @@ const isPhone = /^(?:\+998 \d{2} \d{3} \d{2} \d{2}|101|102|103|104|1050)$/;
 function Rules({ title, items, highlightPhones = false }) {
   return (
     <section className="contract-rule-section">
-      <h3>{title}</h3>
+      {title && <h3>{title}</h3>}
       {items.map(([number, text], index) => (
         <p key={`${number}-${index}`}>
           <b>{number}</b>{" "}
@@ -51,9 +51,58 @@ export const ContractDocument = forwardRef(function ContractDocument(
     room?.roomNumber ? `${room.roomNumber}-xona` : null,
     contract.bedNumber ? `${contract.bedNumber}-o‘rin` : null,
   ].filter(Boolean).join(", ") || "—";
+  const sourceRef = useRef(null);
+  const pagesRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const source = sourceRef.current;
+    const pages = pagesRef.current;
+    if (!source || !pages) return;
+    pages.replaceChildren();
+    let page;
+    const newPage = () => {
+      page = document.createElement("article");
+      page.className = "contract-a4";
+      pages.appendChild(page);
+    };
+    const overflows = (element) => {
+      const pageStyle = getComputedStyle(page);
+      const bottom = page.getBoundingClientRect().bottom - parseFloat(pageStyle.paddingBottom);
+      return element.getBoundingClientRect().bottom > bottom + 1;
+    };
+    newPage();
+    for (const block of source.children) {
+      if (!block.matches("section")) {
+        const copy = block.cloneNode(true);
+        page.appendChild(copy);
+        if (overflows(copy) && page.children.length > 1) {
+          copy.remove();
+          newPage();
+          page.appendChild(copy);
+        }
+        continue;
+      }
+      let section = block.cloneNode(false);
+      page.appendChild(section);
+      for (const child of block.children) {
+        const copy = child.cloneNode(true);
+        section.appendChild(copy);
+        if (overflows(copy) && (section.children.length > 1 || page.children.length > 1)) {
+          copy.remove();
+          if (!section.children.length) section.remove();
+          newPage();
+          section = block.cloneNode(false);
+          page.appendChild(section);
+          section.appendChild(copy);
+        }
+      }
+    }
+  }, [contract, student, organization]);
+
   return (
-    <div className="contract-pages" ref={ref}>
-      <article className="contract-a4">
+    <>
+      <div className="contract-pages contract-pagination-measure" aria-hidden="true">
+        <article className="contract-a4" ref={sourceRef}>
         <header className="contract-document-header">
           <div>
             <h1>“{hostelName}”</h1>
@@ -73,7 +122,7 @@ export const ContractDocument = forwardRef(function ContractDocument(
         <h3 className="contract-main-title">
           “{hostelName}” talabalar yotoqxonasining ichki tartib qoidalari
         </h3>
-        <p>
+        <p className="contract-intro">
           “{hostelName}” talabalar yotoqxonasi (keyinchalik “Yotoqxona” deb
           yuritiladi).
         </p>
@@ -82,21 +131,15 @@ export const ContractDocument = forwardRef(function ContractDocument(
           items={entryRules}
         />
         <Rules title="2. To‘lov tartibi" items={paymentRules} />
-      </article>
-      <article className="contract-a4">
         <Rules
           title="3. Yotoqxonada turuvchilarning majburiyatlari"
           items={duties}
         />
-      </article>
-      <article className="contract-a4">
         <Rules
           title="4. Yotoqxona hududida quyidagilarni qilish qat’iyan man etiladi"
           items={prohibitions}
         />
         <Rules title="5. Xavfsizlik" items={safety} />
-      </article>
-      <article className="contract-a4">
         <Rules title="6. Jarimalar" items={penalties} />
         <Rules
           title="7. Yotoqxona hududida favqulodda holat yuz berganda murojaat qilinadigan xizmatlarning telefon raqamlari"
@@ -110,8 +153,6 @@ export const ContractDocument = forwardRef(function ContractDocument(
         />
         <Rules title="9. Eslatma" items={reminders} />
         <p>Yotoqxona ma’muriyati</p>
-      </article>
-      <article className="contract-a4">
         <section>
           <h3>10. Rozilik xati</h3>
           <p>
@@ -185,8 +226,14 @@ export const ContractDocument = forwardRef(function ContractDocument(
             __________________ <b>Gafarov I.S.</b>
           </p>
         </section>
-      </article>
-    </div>
+        </article>
+      </div>
+      <div className="contract-pages" ref={(element) => {
+        pagesRef.current = element;
+        if (typeof ref === "function") ref(element);
+        else if (ref) ref.current = element;
+      }} />
+    </>
   );
 });
 

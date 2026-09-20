@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { ContractDocument } from './ContractPreviewModal'
-import { createSinglePageContractPdf } from './contractPdf'
+import { createContractPdf } from './contractPdf'
 
 export function ContractDownloadButton({ contract, student, organization }) {
   const documentRef = useRef(null)
@@ -8,7 +8,7 @@ export function ContractDownloadButton({ contract, student, organization }) {
   const download = async () => {
     try {
       setDownloading(true)
-      const pdf = await createSinglePageContractPdf(documentRef.current)
+      const pdf = await createContractPdf(documentRef.current)
       pdf.save(`Shartnoma-${contract.contractNumber}.pdf`)
     } finally { setDownloading(false) }
   }

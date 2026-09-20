@@ -393,6 +393,11 @@ export const baseApi = createApi({
         unsubscribe()
       },
     }),
+    getDebtorHistory: builder.query({
+      query: (studentId) => `/debtors/${studentId}/history`,
+      transformResponse: (response) => response.data.payments,
+      providesTags: [{ type: 'Payment', id: 'LIST' }],
+    }),
     setDebtorDeadline: builder.mutation({
       query: ({ studentId, ...body }) => ({ url: `/debtors/${studentId}/deadline`, method: 'PUT', body }),
       transformResponse: (response) => response.data,
@@ -796,6 +801,7 @@ export const {
   useGetAdvancePaymentsQuery,
   useGetStudentPaymentsQuery,
   useGetDebtorsQuery,
+  useGetDebtorHistoryQuery,
   useSetDebtorDeadlineMutation,
   useSendDebtorSmsMutation,
   useGetAttendanceQuery,

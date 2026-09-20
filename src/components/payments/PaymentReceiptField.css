@@ -1,0 +1,29 @@
+.payment-receipt-picker{display:flex;align-items:stretch;gap:10px;min-width:0}
+.payment-receipt-upload,.payment-receipt-preview-button{position:relative;display:grid;place-items:center;align-content:center;gap:4px;flex:none;width:88px;height:82px;border:1.5px dashed #a9d1c8;border-radius:10px;background:#f5fbf9;color:#177e73;cursor:pointer;transition:border-color .18s,background .18s,box-shadow .18s}
+.payment-receipt-upload:hover,.payment-receipt-upload:focus-within,.payment-receipt-preview-button:hover,.payment-receipt-preview-button:focus-visible{border-color:#168b7d;background:#eaf7f3;box-shadow:0 0 0 3px rgba(22,139,125,.1)}
+.payment-receipt-upload.is-disabled{opacity:.55;cursor:not-allowed}
+.payment-receipt-picker-input{position:absolute!important;width:1px!important;height:1px!important;opacity:0;overflow:hidden}
+.payment-receipt-picker-icon{display:grid;place-items:center;width:28px;height:28px;color:#148074}
+.payment-receipt-picker-icon svg{width:25px;height:25px}
+.payment-receipt-upload-label{font-size:10px;font-weight:700;white-space:nowrap}
+.payment-receipt-preview-wrap{position:relative;width:88px;height:82px}
+.payment-receipt-preview-button{overflow:hidden;padding:0;border-style:solid;background:#fff;color:#fff}
+.payment-receipt-remove{position:absolute;z-index:1;top:-8px;right:-8px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:1px solid #d6b1b1;border-radius:50%;background:#fff;color:#b14343;font-size:18px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(30,50,50,.13)}
+.payment-receipt-remove:hover,.payment-receipt-remove:focus-visible{background:#fff0ef;border-color:#b14343}
+.payment-receipt-picker-preview{display:block;width:100%;height:100%;object-fit:cover}
+.payment-receipt-preview-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(19,70,68,.58);opacity:0;transition:opacity .18s}
+.payment-receipt-preview-button:hover .payment-receipt-preview-overlay,.payment-receipt-preview-button:focus-visible .payment-receipt-preview-overlay{opacity:1}
+.payment-receipt-preview-overlay svg{width:28px;height:28px}
+.payment-receipt-large-preview{display:block;max-width:100%;max-height:75vh;margin:0 auto;object-fit:contain}
+.payment-method-row.method-cash,.debtor-payment-method-row.method-cash{background:#eef8f3;border:1px solid #cce7d6}
+.payment-method-row.method-online,.debtor-payment-method-row.method-online{background:#f5f0fc;border:1px solid #dfcff1}
+.payment-method-row.method-card,.debtor-payment-method-row.method-card{background:#eef4fd;border:1px solid #cadbf4}
+.payment-method-row.method-bank,.debtor-payment-method-row.method-bank{background:#fff7e9;border:1px solid #f0dfb5}
+.payment-method-row.method-cash .ant-form-item-label>label,.debtor-payment-method-row.method-cash .ant-form-item-label>label{color:#29765a}
+.payment-method-row.method-online .ant-form-item-label>label,.debtor-payment-method-row.method-online .ant-form-item-label>label{color:#7950a4}
+.payment-method-row.method-card .ant-form-item-label>label,.debtor-payment-method-row.method-card .ant-form-item-label>label{color:#3c69a7}
+.payment-method-row.method-bank .ant-form-item-label>label,.debtor-payment-method-row.method-bank .ant-form-item-label>label{color:#9b711f}
+.payment-split-fields .payment-method-rows{margin-bottom:0}
+.payment-split-fields .selected-contract{margin:16px 0}
+.debtor-payment-split .debtor-payment-methods{margin-bottom:16px}
+.payment-receipt-history-link{padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}

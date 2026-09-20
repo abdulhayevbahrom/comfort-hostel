@@ -17,12 +17,15 @@ import {
   useCreatePaymentMutation,
   useCreateDepositPaymentMutation,
   useGetDebtorsQuery,
+  useGetDebtorHistoryQuery,
   useGetGeneralSettingsQuery,
   useSendDebtorSmsMutation,
   useSetDebtorDeadlineMutation,
 } from "../../store/baseApi";
 import { printPaymentReceipt } from "../payments/paymentReceipt";
 import { printDepositReceipt } from "../payments/depositReceipt";
+import { PaymentReceiptField } from '../payments/PaymentReceiptField'
+import { uploadReceiptParts } from '../payments/uploadReceiptParts'
 import "./Debtors.css";
 
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
@@ -40,6 +43,7 @@ export function DebtorsPage({ currentEmployee }) {
   const [selected, setSelected] = useState(null);
   const [paymentDebtor, setPaymentDebtor] = useState(null);
   const [historyDebtor, setHistoryDebtor] = useState(null);
+  const { currentData: paymentHistory = [], isFetching: historyLoading, isError: historyError } = useGetDebtorHistoryQuery(historyDebtor?.student?.id, { skip: !historyDebtor, refetchOnMountOrArgChange: true });
   const [actionDebtor, setActionDebtor] = useState(null);
   const [deadlineDebtor, setDeadlineDebtor] = useState(null);
   const [smsDebtorId, setSmsDebtorId] = useState(null);
@@ -81,19 +85,19 @@ export function DebtorsPage({ currentEmployee }) {
       paymentKind: first ? "contract" : "deposit",
       installment: first?.id,
       paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
-      paymentDates: {},
+      paymentDates: {}, receiptFiles: {},
       payerType: "",
       note: "",
     });
   };
   const acceptPayment = async (values) => {
     try {
-      const paymentParts = Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() }));
       const maximum = values.paymentKind === "deposit" ? Number(paymentDebtor.depositDebt || 0) : Number(paymentDebtor.periods.find((item) => item.id === values.installment)?.debt || 0);
       if (!partsTotal || partsTotal > maximum) {
         toast.error(partsTotal ? "To‘lov summasi qarzdorlikdan oshmasligi kerak" : "Kamida bitta to‘lov usuliga summa kiriting");
         return;
       }
+      const paymentParts = await uploadReceiptParts(Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() })), values.receiptFiles);
       if (values.paymentKind === "deposit") {
         const result = await createDepositPayment({ studentId: paymentDebtor.student.id, paymentParts }).unwrap();
         printDepositReceipt(result.student || paymentDebtor.student, result.payments, settingsData?.settings);
@@ -494,7 +498,7 @@ export function DebtorsPage({ currentEmployee }) {
             name="paymentKind"
             label="To‘lov yo‘nalishi"
           >
-            <Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi", disabled: !(paymentDebtor?.periods || []).length }, { value: "deposit", label: "Depozit to‘lovi", disabled: !Number(paymentDebtor?.depositDebt || 0) }]} onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {} })} />
+            <Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi", disabled: !(paymentDebtor?.periods || []).length }, { value: "deposit", label: "Depozit to‘lovi", disabled: !Number(paymentDebtor?.depositDebt || 0) }]} onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {}, receiptFiles: {} })} />
           </Form.Item>
           {paymentKind === "contract" && <>
           <Form.Item
@@ -503,7 +507,7 @@ export function DebtorsPage({ currentEmployee }) {
             rules={[{ required: true, message: "Davrni tanlang" }]}
           >
             <Select
-              onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {} })}
+              onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {}, receiptFiles: {} })}
               options={(paymentDebtor?.periods || []).map((paymentPeriod) => ({
                 value: paymentPeriod.id,
                 label: `${paymentPeriod.periodKey} — ${money(paymentPeriod.debt)} qoldiq`,
@@ -522,9 +526,10 @@ export function DebtorsPage({ currentEmployee }) {
             <label>To‘lov usullari bo‘yicha summa va sana</label>
             <div className="debtor-payment-methods">
               {Object.entries(methods).map(([method, label]) => (
-                <div className="debtor-payment-method-row" key={method}>
+                <div className={`debtor-payment-method-row method-${method}`} key={method}>
                   <Form.Item name={["paymentParts", method]} label={label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/[^\d]/g, "")} /></Form.Item>
                   <Form.Item name={["paymentDates", method]} label="To‘lov sanasi va vaqti" rules={Number(paymentParts[method] || 0) > 0 ? [{ required: true, message: `${label} sanasini tanlang` }] : []}><DatePicker disabled={Number(paymentParts[method] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
+                  {method !== 'cash' && Number(paymentParts[method] || 0) > 0 && <Form.Item name={['receiptFiles', method]} label={`${label} kvitansiyasi (ixtiyoriy)`} preserve={false}><PaymentReceiptField /></Form.Item>}
                 </div>
               ))}
             </div>
@@ -567,7 +572,7 @@ export function DebtorsPage({ currentEmployee }) {
               </tr>
             </thead>
             <tbody>
-              {(historyDebtor?.paymentHistory || []).map((payment) => (
+              {paymentHistory.map((payment) => (
                 <tr key={payment.id}>
                   <td>{dayjs(payment.createdAt).format("DD.MM.YYYY HH:mm")}</td>
                   <td>{payment.contract?.contractNumber || "—"}</td>
@@ -583,13 +588,15 @@ export function DebtorsPage({ currentEmployee }) {
                   <td>{payment.note || "—"}</td>
                 </tr>
               ))}
-              {!historyDebtor?.paymentHistory?.length && (
+              {!historyLoading && !historyError && !paymentHistory.length && (
                 <tr>
                   <td colSpan="6" className="debtor-state">
                     To‘lovlar tarixi mavjud emas
                   </td>
                 </tr>
               )}
+              {historyLoading && <tr><td colSpan="6" className="debtor-state">Yuklanmoqda…</td></tr>}
+              {historyError && <tr><td colSpan="6" className="debtor-state">To‘lovlar tarixini yuklab bo‘lmadi</td></tr>}
             </tbody>
           </table>
         </div>

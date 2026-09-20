@@ -3,7 +3,7 @@ import { Button, DatePicker, Form, Input, InputNumber, Modal, Segmented, Select 
 import dayjs from 'dayjs'
 import { calculateContractPayment } from '../../utils/contractPayment'
 
-const createInitialValues = () => ({ contractNumber: `SHARTNOMA-${dayjs().format('YYYY-MM')}`, room: undefined, startDate: dayjs(), endDate: dayjs().add(1, 'month'), paymentType: 'monthly', paymentAmount: 0, status: 'active', note: '' })
+const createInitialValues = () => ({ contractNumber: `SHARTNOMA-${dayjs().format('YYYY-MM')}`, contractDate: dayjs(), room: undefined, startDate: dayjs(), endDate: dayjs().add(1, 'month'), paymentType: 'monthly', paymentAmount: 0, status: 'active', note: '' })
 
 function RoomPicker({ value, onChange, rooms, bedNumber, onBedChange, currentContractId }) {
   if (!rooms.length) return <div className="contract-room-empty">Mos bo‘sh xona mavjud emas</div>
@@ -34,14 +34,15 @@ export function ContractFormModal({ open, contract, rooms, loading, error, onClo
   const floors = [...new Set(rooms.map((room) => String(room.floor)))].sort((first, second) => first.localeCompare(second, undefined, { numeric: true }))
   const visibleRooms = floor ? rooms.filter((room) => room.floor === floor) : rooms
   const prepare = (visible) => {
-    if (visible) { setFloor(undefined); form.setFieldsValue(contract ? { ...contract, room: contract.room?.id || contract.room, bedNumber: contract.bedNumber, paymentType: contract.paymentType || 'monthly', paymentAmount: contract.paymentAmount ?? contract.monthlyAmount ?? 0, startDate: dayjs(contract.startDate), endDate: dayjs(contract.endDate) } : createInitialValues()) }
+    if (visible) { setFloor(undefined); form.setFieldsValue(contract ? { ...contract, room: contract.room?.id || contract.room, bedNumber: contract.bedNumber, paymentType: contract.paymentType || 'monthly', paymentAmount: contract.paymentAmount ?? contract.monthlyAmount ?? 0, contractDate: dayjs(contract.contractDate || contract.createdAt), startDate: dayjs(contract.startDate), endDate: dayjs(contract.endDate) } : createInitialValues()) }
     else form.resetFields()
   }
 
   return (
     <Modal open={open} onCancel={onClose} afterOpenChange={prepare} footer={null} destroyOnHidden width={650} rootClassName="contract-form-modal" title={contract ? 'Shartnomani tahrirlash' : 'Yangi shartnoma tuzish'}>
-      <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => onSubmit({ ...values, startDate: values.startDate.format('YYYY-MM-DD'), endDate: values.endDate.format('YYYY-MM-DD') })}>
+      <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => onSubmit({ ...values, contractDate: values.contractDate.format('YYYY-MM-DD'), startDate: values.startDate.format('YYYY-MM-DD'), endDate: values.endDate.format('YYYY-MM-DD') })}>
         <div className="contract-form-grid"><Form.Item name="contractNumber" label="Shartnoma raqami" rules={[{ required: true, whitespace: true, message: 'Shartnoma raqamini kiriting' }]}><Input maxLength={60} placeholder="Masalan: TTJ-2026-0001" /></Form.Item><Form.Item name="paymentType" label="Shartnoma turi"><Segmented className="contract-status-segmented" block options={[{ value: 'daily', label: 'Kunlik' }, { value: 'monthly', label: 'Oylik' }]} /></Form.Item></div>
+        <Form.Item name="contractDate" label="Shartnoma sanasi" rules={[{ required: true, message: 'Shartnoma sanasini kiriting' }]}><DatePicker format="DD.MM.YYYY" placeholder="Sanani tanlang" style={{ width: '100%' }} /></Form.Item>
         <div className="contract-room-filter"><span>Bo‘sh xonalar</span><Select allowClear value={floor} placeholder="Barcha qavatlar" options={floors.map((value) => ({ value, label: `${value}-qavat` }))} onChange={(value) => { setFloor(value); form.setFieldValue('room', undefined) }} /></div>
         <Form.Item name="room" rules={[{ required: true, message: 'Xonani tanlang' }]}><RoomPicker rooms={visibleRooms} bedNumber={bedNumber} onBedChange={(value) => form.setFieldValue('bedNumber', value)} currentContractId={contract?.id} /></Form.Item>
         {selectedRoomId && <Form.Item name="bedNumber" rules={[{ required: true, message: 'Xonadagi o‘rinni tanlang' }]} hidden><Input /></Form.Item>}

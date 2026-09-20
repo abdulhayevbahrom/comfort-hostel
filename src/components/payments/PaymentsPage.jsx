@@ -30,6 +30,9 @@ import { AdvancePaymentsTab } from "./AdvancePaymentsTab";
 import "./Payments.css";
 import { canEditOrDelete } from "../../utils/permissions";
 import { groupPayments } from "../../utils/groupPayments";
+import { PaymentReceiptField } from './PaymentReceiptField'
+import { ReceiptImageLink } from './ReceiptImageLink'
+import { uploadReceiptParts } from './uploadReceiptParts'
 
 const methods = { cash: "Naqd", online: "Click", card: "Karta", bank: "Bank" };
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
@@ -96,6 +99,7 @@ export function PaymentsPage({ currentEmployee }) {
       student: undefined,
       paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
       paymentDates: { cash: null, online: null, card: null, bank: null },
+      receiptFiles: {},
       amount: null,
       contract: undefined,
       installment: undefined,
@@ -129,7 +133,7 @@ export function PaymentsPage({ currentEmployee }) {
         }).unwrap();
         toast.success("To‘lov yangilandi");
       } else {
-        const parts = buildParts(values);
+        const parts = await uploadReceiptParts(buildParts(values), values.receiptFiles);
         if (!parts.length) throw new Error("To‘lov summalarini kiriting");
         if (values.paymentKind === "deposit") {
           const result = await createDepositPayment({ studentId: values.student, paymentParts: parts }).unwrap();
@@ -313,6 +317,7 @@ export function PaymentsPage({ currentEmployee }) {
                         {payment.breakdown?.map((part, index) => (
                           <span className={`method-badge ${part.method}`} key={`${part.method}-${index}`}>
                             {methods[part.method]} · {money(part.amount)}
+                            {part.receiptImage && <ReceiptImageLink receiptImage={part.receiptImage} />}
                           </span>
                         ))}
                       </div>
@@ -531,9 +536,10 @@ export function PaymentsPage({ currentEmployee }) {
           </Form.Item>
           </> : <div className="payment-split-fields">
             <label>To‘lov usullari bo‘yicha summa va sana</label>
-            <div className="payment-method-rows">{Object.entries(methods).map(([partMethod, label]) => <div className="payment-method-row" key={partMethod}>
+            <div className="payment-method-rows">{Object.entries(methods).map(([partMethod, label]) => <div className={`payment-method-row method-${partMethod}`} key={partMethod}>
               <Form.Item name={["paymentParts", partMethod]} label={label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(v) => String(v || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(v) => String(v || "").replace(/[^\d]/g, "")} /></Form.Item>
               <Form.Item name={["paymentDates", partMethod]} label="To‘lov sanasi va vaqti" rules={Number(paymentParts[partMethod] || 0) > 0 ? [{ required: true, message: `${label} sanasini tanlang` }] : []}><DatePicker disabled={Number(paymentParts[partMethod] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
+              {partMethod !== 'cash' && Number(paymentParts[partMethod] || 0) > 0 && <Form.Item name={['receiptFiles', partMethod]} label={`${label} kvitansiyasi (ixtiyoriy)`} preserve={false}><PaymentReceiptField /></Form.Item>}
             </div>)}</div>
             <div className="selected-contract"><div><small>Jami to‘lov</small><b>{money(partsTotal)}</b></div><div><small>Maksimal</small><b>{money(paymentKind === "deposit" ? selectedDepositStudent?.balance : availableBalance)}</b></div></div>
           </div>}

@@ -1,160 +1,192 @@
 import { forwardRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import dayjs from "dayjs";
+import { entryRules, paymentRules, duties, prohibitions, safety, penalties, emergency, contacts, reminders } from './contractRules';
 
 const formatDate = (value) =>
-  value ? new Date(value).toLocaleDateString("uz-UZ") : "—";
+  value ? dayjs(value).format("YYYY-MM-DD") : "—";
+
+const phonePattern = /(\+998 \d{2} \d{3} \d{2} \d{2}|\b(?:101|102|103|104|1050)\b)/g;
+const isPhone = /^(?:\+998 \d{2} \d{3} \d{2} \d{2}|101|102|103|104|1050)$/;
+
+function Rules({ title, items, highlightPhones = false }) {
+  return (
+    <section className="contract-rule-section">
+      <h3>{title}</h3>
+      {items.map(([number, text], index) => (
+        <p key={`${number}-${index}`}>
+          <b>{number}</b>{" "}
+          {highlightPhones
+            ? text.split(phonePattern).map((part, partIndex) =>
+                isPhone.test(part) ? <strong key={partIndex}>{part}</strong> : part,
+              )
+            : text}
+        </p>
+      ))}
+    </section>
+  );
+}
 
 export const ContractDocument = forwardRef(function ContractDocument(
   { contract, student, organization },
   ref,
 ) {
-  const hostelName = organization?.hostelName || "TizimPlus Hostel";
+  const hostelName =
+    organization?.hostelName && organization.hostelName !== "TizimPlus Hostel"
+      ? organization.hostelName
+      : "COMFORT HOSTEL";
+  const address =
+    organization?.organizationAddress || "Turon ko‘chasi 4-yo‘lak 11-uy";
+  const organizationPhone = organization?.organizationPhone;
+  const phone =
+    organizationPhone && /^\d{9}$/.test(organizationPhone)
+      ? `+998 ${organizationPhone.slice(0, 2)} ${organizationPhone.slice(2, 5)} ${organizationPhone.slice(5, 7)} ${organizationPhone.slice(7)}`
+      : organizationPhone || "+998 90 450 55 52";
+  const displayedNumber = String(contract.contractNumber || "").replace(/^SHARTNOMA\s*[-–]?\s*/i, "");
+  const studentId = String(student.id || student._id || "");
+  const faceIdCode = student.faceIdCode || (/^[a-f\d]{24}$/i.test(studentId) ? `STU${studentId.slice(-12).toUpperCase()}` : "—");
+  const room = contract.room;
+  const roomLocation = [
+    room?.block ? `${room.block} blok` : room?.floor != null ? `${room.floor}-qavat` : null,
+    room?.roomNumber ? `${room.roomNumber}-xona` : null,
+    contract.bedNumber ? `${contract.bedNumber}-o‘rin` : null,
+  ].filter(Boolean).join(", ") || "—";
   return (
-    <article className="contract-a4" ref={ref}>
-      <header className="contract-document-header">
-        {organization?.logo && (
-          <img
-            src={organization.logo.displayUrl || organization.logo.url}
-            alt="Tashkilot logosi"
-          />
-        )}
-        <div>
-          <h1>{hostelName}</h1>
-          <p>
-            {organization?.organizationAddress ||
-              "Tashkilot manzili kiritilmagan"}
-          </p>
-          <p>Tel: {organization?.organizationPhone || "—"}</p>
-        </div>
-      </header>
-      <h2>TALABALAR YOTOQXONASIDA YASHASH BO‘YICHA KELISHUV</h2>
-      <div className="contract-document-meta">
-        <strong>№ {contract.contractNumber}</strong>
-        <span>{formatDate(contract.startDate)}</span>
-      </div>
-      <p>
-        <b>Yotoqxona nomi:</b> {hostelName}
-      </p>
-      <p>
-        Men, <b>{student.fullName}</b>, ushbu yotoqxonada yashash davomida
-        quyidagi qoidalar bilan tanishdim va ularga rioya qilishga rozilik
-        bildiraman.
-      </p>
-      <section>
-        <h3>1. UMUMIY QOIDALAR</h3>
-        <p>Yotoqxonada tozalik, tartib va o‘zaro hurmat saqlanadi.</p>
-        <p>
-          Har bir yashovchi boshqa yashovchilarning tinchligi va qulayligini
-          hurmat qilishi lozim.
-        </p>
-        <p>Begona shaxslarni yotoqxonaga olib kirish mumkin emas.</p>
-      </section>
-      <section>
-        <h3>2. KIRISH-CHIQISH TARTIBI</h3>
-        <p>Tashqariga chiqishda imkon qadar ma’muriyatni xabardor qilaman.</p>
-        <p>Kech qoladigan bo‘lsam, imkon qadar oldindan ma’lum qilaman.</p>
-        <p>Telefonim doimo aloqada bo‘ladi.</p>
-      </section>
-      <section>
-        <h3>3. XAVFSIZLIK</h3>
-        <p>
-          Men voyaga yetgan shaxs sifatida yotoqxona hududidan tashqaridagi
-          shaxsiy harakatlarim va xavfsizligim uchun o‘zim javobgar ekanligimni
-          tushunaman.
-        </p>
-        <p>
-          Yotoqxona ma’muriyati barcha yashovchilar uchun qulay va xavfsiz
-          sharoit yaratishga harakat qiladi.
-        </p>
-      </section>
-      <section>
-        <h3>4. TO‘LOV TARTIBI</h3>
-        <p>Yashash uchun to‘lov oldindan amalga oshiriladi.</p>
-        <p>
-          To‘langan mablag‘ yashash joyini band qilish va saqlab turish uchun
-          hisoblanadi.
-        </p>
-        <p>
-          Yashovchi o‘z xohishiga ko‘ra muddatidan oldin chiqib ketgan taqdirda,
-          to‘lov avtomatik ravishda qaytarilmaydi. To‘lovni qaytarish yoki qayta
-          hisob-kitob qilish masalasi ma’muriyat tomonidan har bir holat alohida
-          ko‘rib chiqilgan holda hal etiladi.
-        </p>
-      </section>
-      <section>
-        <h3>5. DEPOZIT TARTIBI</h3>
-        <p>
-          Yotoqxonaga joylashishda talaba birinchi oy uchun to‘liq yashash
-          to‘lovi bilan birga 500 000 (besh yuz ming) so‘m miqdorida depozit
-          to‘laydi.
-        </p>
-        <p>
-          Depozit talabaning tanlangan yashash muddatiga rioya qilishini
-          ta’minlash va yotoqxonadagi mulk hamda jihozlarni asrash maqsadida
-          olinadi.
-        </p>
-        <p>
-          Talaba kelishilgan yashash muddatini to‘liq o‘tib, yotoqxonani
-          belgilangan tartibda topshirsa, ushbu depozit yashashning oxirgi oyi
-          dagi to‘lovga hisoblanadi.
-        </p>
-        <p>
-          Masalan, oylik yashash to‘lovi 1 200 000 so‘m bo‘lsa, oxirgi oy uchun
-          talaba 700 000 so‘m to‘laydi, qolgan 500 000 so‘m depozit hisobidan
-          qoplanadi.
-        </p>
-        <p>
-          Talaba kelishilgan yashash muddatini tugatmasdan, o‘z xohishiga ko‘ra
-          yotoqxonadan chiqib ketsa, depozit qaytarilmaydi va mavjud
-          qarzdorliklarni qoplash uchun ishlatiladi.
-        </p>
-      </section>
-      <section>
-        <h3>6. YAKUNIY QOIDALAR</h3>
-        <p>
-          Ushbu kelishuv yotoqxonada tartib, xavfsizlik va qulay muhitni saqlash
-          maqsadida tuzilgan.
-        </p>
-        <p>
-          Men kelishuv mazmuni bilan tanishdim va undagi shartlarga roziman.
-        </p>
-        {contract.note && (
-          <p>
-            <b>Qo‘shimcha izoh:</b> {contract.note}
-          </p>
-        )}
-      </section>
-      <section className="contract-requisites">
-        <h3>YASHOVCHI VA OTA-ONA (YOKI YAQIN QARINDOSH) MA’LUMOTLARI</h3>
-        <div>
+    <div className="contract-pages" ref={ref}>
+      <article className="contract-a4">
+        <header className="contract-document-header">
           <div>
-            <b>Yashovchi</b>
-            <p>F.I.Sh.: {student.fullName}</p>
-            <p>Tel: {student.phone}</p>
-            <p>
-              Xona: {contract.room?.block || "—"} blok,{" "}
-              {contract.room?.roomNumber || "—"}-xona
-            </p>
-            <p>
-              Muddat: {formatDate(contract.startDate)} —{" "}
-              {formatDate(contract.endDate)}
-            </p>
-            <span>Imzo: __________________</span>
+            <h1>“{hostelName}”</h1>
+            <p>Samarqand</p>
+            <p>Tel.: {phone}</p>
           </div>
-          <div>
-            <b>Ota-ona yoki yaqin qarindosh</b>
-            <p>
-              Farzandim (yoki yaqinim) ushbu yotoqxonada yashashi va
-              yotoqxonaning ichki tartib-qoidalari bilan tanishganimni
-              tasdiqlayman.
-            </p>
-            <p>Tel: {student.fatherPhone || student.motherPhone || "__________________"}</p>
-            <p>Sana: __________________</p>
-            <span>Imzo: __________________</span>
-          </div>
+        </header>
+        <h2>TALABALAR YOTOQXONASIDA YASHASH BO‘YICHA KELISHUV</h2>
+        <div className="contract-document-identifiers">
+          <span><b>Xona:</b> {roomLocation}</span>
+          <span><b>FaceID kodi:</b> {faceIdCode}</span>
         </div>
-      </section>
-    </article>
+        <div className="contract-document-meta">
+          <strong>№ SHARTNOMA – {displayedNumber}</strong>
+          <span>{formatDate(contract.contractDate || contract.createdAt)}</span>
+        </div>
+        <h3 className="contract-main-title">
+          “{hostelName}” talabalar yotoqxonasining ichki tartib qoidalari
+        </h3>
+        <p>
+          “{hostelName}” talabalar yotoqxonasi (keyinchalik “Yotoqxona” deb
+          yuritiladi).
+        </p>
+        <Rules
+          title="1. Yotoqxonaga kirib-chiqish vaqtlari"
+          items={entryRules}
+        />
+        <Rules title="2. To‘lov tartibi" items={paymentRules} />
+      </article>
+      <article className="contract-a4">
+        <Rules
+          title="3. Yotoqxonada turuvchilarning majburiyatlari"
+          items={duties}
+        />
+      </article>
+      <article className="contract-a4">
+        <Rules
+          title="4. Yotoqxona hududida quyidagilarni qilish qat’iyan man etiladi"
+          items={prohibitions}
+        />
+        <Rules title="5. Xavfsizlik" items={safety} />
+      </article>
+      <article className="contract-a4">
+        <Rules title="6. Jarimalar" items={penalties} />
+        <Rules
+          title="7. Yotoqxona hududida favqulodda holat yuz berganda murojaat qilinadigan xizmatlarning telefon raqamlari"
+          items={emergency}
+          highlightPhones
+        />
+        <Rules
+          title="8. Yotoqxona ma’muriyatining telefon raqamlari"
+          items={contacts}
+          highlightPhones
+        />
+        <Rules title="9. Eslatma" items={reminders} />
+        <p>Yotoqxona ma’muriyati</p>
+      </article>
+      <article className="contract-a4">
+        <section>
+          <h3>10. Rozilik xati</h3>
+          <p>
+            <b>10.1</b> Men, <b>{student.fullName}</b>, ushbu yotoqxonada
+            yashash davomida yuqoridagi qoidalar bilan tanishdim va ularga rioya
+            qilishga rozilik bildiraman.
+          </p>
+          <p className="contract-consent-sign">______________________Imzo</p>
+        </section>
+        <section className="contract-requisites">
+          <div>
+            <div>
+              <b>Yashovchi talabaning F.I.Sh.</b>
+              <p className="contract-fill-line">{student.fullName}</p>
+              <p>
+                <b>Telefoni:</b>{" "}
+                <span className="contract-inline-line">
+                  {student.phone || ""}
+                </span>
+              </p>
+              <p>
+                <b>Xona:</b>{" "}
+                <span className="contract-inline-line">{roomLocation}</span>
+              </p>
+              <p>
+                <b>Muddat:</b>{" "}
+                <span className="contract-inline-line">
+                  {formatDate(contract.startDate)} —{" "}
+                  {formatDate(contract.endDate)}
+                </span>
+              </p>
+              <p className="contract-fill-line">&nbsp;</p>
+              <p>
+                <b>Imzo:</b> <span className="contract-inline-line">&nbsp;</span>
+              </p>
+            </div>
+            <div>
+              <b>Otasi yoki onasining F.I.Sh.</b>
+              <p className="contract-fill-line">&nbsp;</p>
+              <p>
+                Ushbu yotoqxonaning ichki tartib qonun-qoidalari bilan tanishdim.
+                Farzandim (yaqinim, qarindoshim) ushbu yotoqxonada yotishiga
+                roziman.
+              </p>
+              <p>
+                <b>Imzo:</b> <span className="contract-inline-line">&nbsp;</span>
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className="contract-organization">
+          <p>
+            <b>Yotoqxona nomi:</b> “{hostelName}”
+          </p>
+          <p>
+            <b>Manzil:</b> {address}
+          </p>
+          <p>
+            <b>H/R:</b> 5614623012927729
+          </p>
+          <p>
+            <b>Bank:</b> Asaka bank
+          </p>
+          <p>
+            <b>MFO:</b> 00873
+          </p>
+          <p>
+            <b>STIR:</b> 32404576180026
+          </p>
+          <p className="contract-director-sign">
+            __________________ <b>Gafarov I.S.</b>
+          </p>
+        </section>
+      </article>
+    </div>
   );
 });
 
@@ -167,23 +199,18 @@ export function ContractPreviewModal({
 }) {
   useEffect(() => {
     if (!open) return undefined;
-
     const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event) => {
       if (event.key === "Escape") onClose();
     };
-
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, onClose]);
-
   if (!open || !contract) return null;
-
   return createPortal(
     <div
       className="contract-pdf-viewer"

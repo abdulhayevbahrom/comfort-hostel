@@ -10,7 +10,7 @@ export function groupPayments(payments = []) {
     const group = groups.get(key);
     group.sourcePaymentIds.push(payment.id);
     group.amount += Number(payment.amount || 0);
-    group.breakdown.push({ method: payment.method, amount: payment.amount, paidAt: payment.createdAt });
+    group.breakdown.push({ method: payment.method, amount: payment.amount, paidAt: payment.createdAt, receiptImage: payment.receiptImage });
   });
   return [...groups.values()].map((group) => {
     const isGrouped = group.sourcePaymentIds.length > 1;

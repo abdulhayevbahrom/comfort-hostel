@@ -59,3 +59,5 @@
 @media(max-width:768px){.payment-filter-modal-options .payment-date-range{grid-template-columns:1fr}.payment-filter-modal-options .payment-date-range .ant-picker{height:32px}}
 @media(max-width:768px){.payment-table td:first-child small{display:none}}
 .fund-holder-field{margin-bottom:20px}.fund-holder-field>label{display:block;margin-bottom:8px;color:#263b45}.fund-holder-options{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;background:#f0f6f5;border:1px solid #bcdad6;border-radius:8px}.fund-holder-options button{min-height:38px;padding:6px 12px;color:#466067;background:transparent;border:0;border-radius:6px;font-size:13px;transition:background .18s,color .18s,box-shadow .18s}.fund-holder-options button:hover{color:#0b7068;background:#e2f1ef}.fund-holder-options button.active{color:#fff;background:#159988;box-shadow:0 2px 6px rgba(15,118,110,.22);font-weight:700}
+.payment-method-row .ant-form-item:has(.payment-receipt-picker){grid-column:1/-1;margin-top:8px!important}
+.method-badge a{color:inherit;text-decoration:underline}

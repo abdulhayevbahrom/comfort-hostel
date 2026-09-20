@@ -294,6 +294,7 @@
 .contract-pagination-measure { position: absolute; left: -300mm; width: 210mm; max-width: none; visibility: hidden; pointer-events: none; }
 .contract-pagination-measure .contract-a4 { height: auto; min-height: 297mm; overflow: visible; }
 .contract-pages .contract-a4 { width: 210mm; height: 297mm; min-height: 297mm; padding: 14mm 17mm; margin: 0; overflow: hidden; font-size: 14px; font-weight: 400; line-height: 1.28; }
+.contract-pages .contract-a4, .contract-pages .contract-a4 * { color: #000 !important; -webkit-text-fill-color: #000 !important; }
 .contract-pages .contract-a4 b, .contract-pages .contract-a4 strong { font-weight: 400; }
 .contract-pages .contract-document-identifiers { display: flex; justify-content: space-between; gap: 14px; margin: 8px 0 5px; font-size: 13px; }
 .contract-pages .contract-document-identifiers b { font-weight: 700; }

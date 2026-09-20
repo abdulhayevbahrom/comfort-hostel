@@ -6,8 +6,8 @@ import { entryRules, paymentRules, duties, prohibitions, safety, penalties, emer
 const formatDate = (value) =>
   value ? dayjs(value).format("YYYY-MM-DD") : "—";
 
-const phonePattern = /(\+998 \d{2} \d{3} \d{2} \d{2}|\b(?:101|102|103|104|1050)\b)/g;
-const isPhone = /^(?:\+998 \d{2} \d{3} \d{2} \d{2}|101|102|103|104|1050)$/;
+const phonePattern = /(\+998 \d{2} \d{3} \d{2} \d{2}\.?|\b(?:101|102|103|104|1050)\b\.?)/g;
+const isPhone = /^(?:\+998 \d{2} \d{3} \d{2} \d{2}|101|102|103|104|1050)\.?$/;
 
 function Rules({ title, items, highlightPhones = false }) {
   return (
@@ -15,12 +15,14 @@ function Rules({ title, items, highlightPhones = false }) {
       {title && <h3>{title}</h3>}
       {items.map(([number, text], index) => (
         <p key={`${number}-${index}`}>
-          <b>{number}</b>{" "}
-          {highlightPhones
-            ? text.split(phonePattern).map((part, partIndex) =>
-                isPhone.test(part) ? <strong key={partIndex}>{part}</strong> : part,
-              )
-            : text}
+          <b>{number}</b>
+          <span>
+            {highlightPhones
+              ? text.split(phonePattern).map((part, partIndex) =>
+                  isPhone.test(part) ? <strong key={partIndex}>{part}</strong> : part,
+                )
+              : text}
+          </span>
         </p>
       ))}
     </section>
@@ -152,13 +154,16 @@ export const ContractDocument = forwardRef(function ContractDocument(
           highlightPhones
         />
         <Rules title="9. Eslatma" items={reminders} />
-        <p>Yotoqxona ma’muriyati</p>
+        <p className="contract-administration">Yotoqxona ma’muriyati</p>
         <section>
           <h3>10. Rozilik xati</h3>
-          <p>
-            <b>10.1</b> Men, <b>{student.fullName}</b>, ushbu yotoqxonada
-            yashash davomida yuqoridagi qoidalar bilan tanishdim va ularga rioya
-            qilishga rozilik bildiraman.
+          <p className="contract-consent-rule">
+            <b>10.1</b>
+            <span>
+              Men, <b>{student.fullName}</b>, ushbu yotoqxonada yashash davomida
+              yuqoridagi qoidalar bilan tanishdim va ularga rioya qilishga
+              rozilik bildiraman.
+            </span>
           </p>
           <p className="contract-consent-sign">______________________Imzo</p>
         </section>

@@ -121,7 +121,7 @@
 .contract-document-header { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding-bottom: 16px; border-bottom: 1.5px solid #222; text-align: center; }
 .contract-document-header > div { min-width: 0; }
 .contract-document-header > div > p { text-align: center; }
-.contract-document-header img { width: 54px; height: 54px; object-fit: contain; }
+.contract-document-header img { width: 72px; height: 72px; object-fit: contain; }
 .contract-document-header h1 { margin: 0 0 9px; font-size: 18px; text-transform: uppercase; }
 .contract-document-header p { margin: 4px 0; font-size: 10px; text-align: center; }
 .contract-a4 > h2 { margin: 14px 0 9px; font-size: 15px; text-align: center; }
@@ -309,6 +309,7 @@
 .contract-pages .contract-rule-section p strong { font-weight: 700; }
 .contract-pages .contract-requisites b, .contract-pages .contract-organization b { font-weight: 700; }
 .contract-pages .contract-document-header { flex-direction: column; gap: 0; padding-bottom: 8px; border: 0; }
+.contract-pages .contract-document-header img { width: 72px; height: 72px; margin-bottom: 5px; }
 .contract-pages .contract-document-header h1 { margin: 0 0 2px; font-size: 19px; }
 .contract-pages .contract-document-header p { margin: 0; font-size: 16px; font-weight: 400; }
 .contract-pages .contract-a4 > h2 { margin: 15px 0 8px; font-size: 16px; }

@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import dayjs from "dayjs";
 import { entryRules, paymentRules, duties, prohibitions, safety, penalties, emergency, contacts, reminders } from './contractRules';
+import comfortHostelLogo from '../../assets/comfort-hostel-logo.png';
 
 const formatDate = (value) =>
   value ? dayjs(value).format("YYYY-MM-DD") : "—";
@@ -106,6 +107,7 @@ export const ContractDocument = forwardRef(function ContractDocument(
       <div className="contract-pages contract-pagination-measure" aria-hidden="true">
         <article className="contract-a4" ref={sourceRef}>
         <header className="contract-document-header">
+          <img src={comfortHostelLogo} alt="Comfort Hostel logotipi" />
           <div>
             <h1>“{hostelName}”</h1>
             <p>Samarqand</p>

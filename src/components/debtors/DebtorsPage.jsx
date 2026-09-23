@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   DatePicker,
@@ -6,6 +6,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Pagination,
   Segmented,
   Select,
 } from "antd";
@@ -17,6 +18,7 @@ import {
   useCreatePaymentMutation,
   useCreateDepositPaymentMutation,
   useGetDebtorsQuery,
+  useLazyGetAllDebtorsQuery,
   useGetDebtorHistoryQuery,
   useGetGeneralSettingsQuery,
   useSendDebtorSmsMutation,
@@ -24,9 +26,11 @@ import {
 } from "../../store/baseApi";
 import { printPaymentReceipt } from "../payments/paymentReceipt";
 import { printDepositReceipt } from "../payments/depositReceipt";
-import { PaymentReceiptField } from '../payments/PaymentReceiptField'
-import { uploadReceiptParts } from '../payments/uploadReceiptParts'
+import { PaymentReceiptField } from "../payments/PaymentReceiptField";
+import { uploadReceiptParts } from "../payments/uploadReceiptParts";
+import { printDebtors } from "./printDebtors";
 import "./Debtors.css";
+import { PrinterOutlined } from "@ant-design/icons";
 
 const money = (value) => `${Number(value || 0).toLocaleString("uz-UZ")} so‘m`;
 const tableMoney = (value) => Number(value || 0).toLocaleString("uz-UZ");
@@ -36,22 +40,48 @@ export function DebtorsPage({ currentEmployee }) {
   const navigate = useNavigate();
   const [paymentForm] = Form.useForm();
   const [period, setPeriod] = useState(dayjs().format("YYYY-MM"));
-  const { data, isLoading, error } = useGetDebtorsQuery(period);
-  const { data: settingsData } = useGetGeneralSettingsQuery();
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+  const { data, isLoading, isFetching, error } = useGetDebtorsQuery({
+    period,
+    page,
+    limit: 25,
+    ...(search ? { search } : {}),
+    ...(status !== "all" ? { status } : {}),
+  });
+  const [getAllDebtors, { isFetching: isPreparingPrint }] =
+    useLazyGetAllDebtorsQuery();
+  const { data: settingsData } = useGetGeneralSettingsQuery();
   const [selected, setSelected] = useState(null);
   const [paymentDebtor, setPaymentDebtor] = useState(null);
   const [historyDebtor, setHistoryDebtor] = useState(null);
-  const { currentData: paymentHistory = [], isFetching: historyLoading, isError: historyError } = useGetDebtorHistoryQuery(historyDebtor?.student?.id, { skip: !historyDebtor, refetchOnMountOrArgChange: true });
+  const {
+    currentData: paymentHistory = [],
+    isFetching: historyLoading,
+    isError: historyError,
+  } = useGetDebtorHistoryQuery(historyDebtor?.student?.id, {
+    skip: !historyDebtor,
+    refetchOnMountOrArgChange: true,
+  });
   const [actionDebtor, setActionDebtor] = useState(null);
   const [deadlineDebtor, setDeadlineDebtor] = useState(null);
   const [smsDebtorId, setSmsDebtorId] = useState(null);
   const [deadlineForm] = Form.useForm();
   const [createPayment, { isLoading: creatingPayment }] =
     useCreatePaymentMutation();
-  const [createDepositPayment, { isLoading: creatingDeposit }] = useCreateDepositPaymentMutation();
-  const [setDebtorDeadline, { isLoading: savingDeadline }] = useSetDebtorDeadlineMutation();
+  const [createDepositPayment, { isLoading: creatingDeposit }] =
+    useCreateDepositPaymentMutation();
+  const [setDebtorDeadline, { isLoading: savingDeadline }] =
+    useSetDebtorDeadlineMutation();
   const [sendDebtorSms, { isLoading: sendingSms }] = useSendDebtorSmsMutation();
   const isOwner = ["owner", "admin"].includes(currentEmployee?.role);
   const paymentParts = Form.useWatch("paymentParts", paymentForm) || {};
@@ -64,19 +94,7 @@ export function DebtorsPage({ currentEmployee }) {
   const selectedPeriod = paymentDebtor?.periods.find(
     (item) => item.id === selectedInstallmentId,
   );
-  const debtors = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return (data?.debtors || []).filter((item) => {
-      const searchable =
-        `${item.student?.fullName || ""} ${item.student?.phone || ""} ${item.student?.fatherPhone || ""} ${item.student?.motherPhone || ""} ${item.contracts?.map((contract) => contract.contractNumber).join(" ") || ""} ${item.contracts?.map((contract) => `${contract.room?.block || ""} ${contract.room?.roomNumber || ""}`).join(" ") || ""}`.toLowerCase();
-      const statusMatch =
-        status === "all" ||
-        (status === "overdue"
-          ? item.overdueDebt > 0
-          : item.debtStatus === status);
-      return statusMatch && (!needle || searchable.includes(needle));
-    });
-  }, [data?.debtors, query, status]);
+  const debtors = data?.debtors || [];
   const summary = data?.summary || {};
   const openPayment = (debtor) => {
     const first = debtor.periods[0];
@@ -85,22 +103,50 @@ export function DebtorsPage({ currentEmployee }) {
       paymentKind: first ? "contract" : "deposit",
       installment: first?.id,
       paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
-      paymentDates: {}, receiptFiles: {},
+      paymentDates: {},
+      receiptFiles: {},
       payerType: "",
       note: "",
     });
   };
   const acceptPayment = async (values) => {
     try {
-      const maximum = values.paymentKind === "deposit" ? Number(paymentDebtor.depositDebt || 0) : Number(paymentDebtor.periods.find((item) => item.id === values.installment)?.debt || 0);
+      const maximum =
+        values.paymentKind === "deposit"
+          ? Number(paymentDebtor.depositDebt || 0)
+          : Number(
+              paymentDebtor.periods.find(
+                (item) => item.id === values.installment,
+              )?.debt || 0,
+            );
       if (!partsTotal || partsTotal > maximum) {
-        toast.error(partsTotal ? "To‘lov summasi qarzdorlikdan oshmasligi kerak" : "Kamida bitta to‘lov usuliga summa kiriting");
+        toast.error(
+          partsTotal
+            ? "To‘lov summasi qarzdorlikdan oshmasligi kerak"
+            : "Kamida bitta to‘lov usuliga summa kiriting",
+        );
         return;
       }
-      const paymentParts = await uploadReceiptParts(Object.entries(values.paymentParts || {}).filter(([, amount]) => Number(amount) > 0).map(([method, amount]) => ({ method, amount: Number(amount), paidAt: values.paymentDates?.[method]?.toISOString() })), values.receiptFiles);
+      const paymentParts = await uploadReceiptParts(
+        Object.entries(values.paymentParts || {})
+          .filter(([, amount]) => Number(amount) > 0)
+          .map(([method, amount]) => ({
+            method,
+            amount: Number(amount),
+            paidAt: values.paymentDates?.[method]?.toISOString(),
+          })),
+        values.receiptFiles,
+      );
       if (values.paymentKind === "deposit") {
-        const result = await createDepositPayment({ studentId: paymentDebtor.student.id, paymentParts }).unwrap();
-        printDepositReceipt(result.student || paymentDebtor.student, result.payments, settingsData?.settings);
+        const result = await createDepositPayment({
+          studentId: paymentDebtor.student.id,
+          paymentParts,
+        }).unwrap();
+        printDepositReceipt(
+          result.student || paymentDebtor.student,
+          result.payments,
+          settingsData?.settings,
+        );
         toast.success("Depozit to‘lovi muvaffaqiyatli qabul qilindi");
         setPaymentDebtor(null);
         paymentForm.resetFields();
@@ -128,23 +174,45 @@ export function DebtorsPage({ currentEmployee }) {
   };
   const openDeadline = (debtor) => {
     setDeadlineDebtor(debtor);
-    deadlineForm.setFieldsValue({ deadline: debtor.paymentDeadline ? dayjs(debtor.paymentDeadline) : null });
+    deadlineForm.setFieldsValue({
+      deadline: debtor.paymentDeadline ? dayjs(debtor.paymentDeadline) : null,
+    });
   };
   const saveDeadline = async (values) => {
     try {
-      await setDebtorDeadline({ studentId: deadlineDebtor.student.id, periodKey: period, deadline: values.deadline.format("YYYY-MM-DD") }).unwrap();
+      await setDebtorDeadline({
+        studentId: deadlineDebtor.student.id,
+        periodKey: period,
+        deadline: values.deadline.format("YYYY-MM-DD"),
+      }).unwrap();
       toast.success("To‘lov deadline’i saqlandi");
       setDeadlineDebtor(null);
       deadlineForm.resetFields();
-    } catch (requestError) { toast.error(apiErrorMessage(requestError)); }
+    } catch (requestError) {
+      toast.error(apiErrorMessage(requestError));
+    }
   };
   const sendSms = async (debtor) => {
     try {
       setSmsDebtorId(debtor.student.id);
-      await sendDebtorSms({ studentId: debtor.student.id, periodKey: period }).unwrap();
+      await sendDebtorSms({
+        studentId: debtor.student.id,
+        periodKey: period,
+      }).unwrap();
       toast.success(`SMS yuborildi (${(debtor.smsSentCount || 0) + 1}/3)`);
-    } catch (requestError) { toast.error(apiErrorMessage(requestError)); }
-    finally { setSmsDebtorId(null); }
+    } catch (requestError) {
+      toast.error(apiErrorMessage(requestError));
+    } finally {
+      setSmsDebtorId(null);
+    }
+  };
+  const printAllDebtors = async () => {
+    try {
+      const printData = await getAllDebtors(period).unwrap();
+      printDebtors(printData, settingsData?.settings);
+    } catch (requestError) {
+      toast.error(apiErrorMessage(requestError));
+    }
   };
 
   return (
@@ -174,7 +242,10 @@ export function DebtorsPage({ currentEmployee }) {
               <path d="M8 3v4M16 3v4M3 10h18" />
             </svg>
           }
-          onChange={(date) => setPeriod(date.format("YYYY-MM"))}
+          onChange={(date) => {
+            setPeriod(date.format("YYYY-MM"));
+            setPage(1);
+          }}
         />
       </section>
       <section className="debtor-stats">
@@ -202,9 +273,16 @@ export function DebtorsPage({ currentEmployee }) {
         </article>
         <article className="unpaid">
           <small>
-            {data?.isFuturePeriod ? "To‘lov kutilayotgan talabalar" : "Qarzdor talabalar"}
+            {data?.isFuturePeriod
+              ? "To‘lov kutilayotgan talabalar"
+              : "Qarzdor talabalar"}
           </small>
-          <strong>{data?.isFuturePeriod ? summary.waitingCount || 0 : summary.debtorCount || 0} ta</strong>
+          <strong>
+            {data?.isFuturePeriod
+              ? summary.waitingCount || 0
+              : summary.debtorCount || 0}{" "}
+            ta
+          </strong>
         </article>
       </section>
       <section className="debtors-card">
@@ -216,7 +294,7 @@ export function DebtorsPage({ currentEmployee }) {
                 : "Qarzdorlar ro‘yxati"}
             </h3>
             <p>
-              {debtors.length} ta natija · {period}
+              {data?.pagination?.total || 0} ta natija · {period}
             </p>
           </div>
           <div className="debtor-filters">
@@ -233,7 +311,10 @@ export function DebtorsPage({ currentEmployee }) {
             </div>
             <Select
               value={status}
-              onChange={setStatus}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
               options={[
                 { value: "all", label: "Barcha talabalar" },
                 { value: "overdue", label: "Muddati o‘tgan" },
@@ -241,13 +322,23 @@ export function DebtorsPage({ currentEmployee }) {
                 { value: "unpaid", label: "Umuman to‘lamagan" },
               ]}
             />
+            <Button
+              className="debtor-print-btn"
+              loading={isPreparingPrint}
+              onClick={printAllDebtors}
+              icon={<PrinterOutlined />}
+            >
+              Yuklash
+            </Button>
           </div>
         </div>
         {error && <div className="form-error">{apiErrorMessage(error)}</div>}
         {isLoading ? (
           <div className="debtor-state">Ma’lumotlar yuklanmoqda…</div>
         ) : (
-          <div className="debtor-table-wrap">
+          <div
+            className={`debtor-table-wrap ${isFetching ? "refreshing" : ""}`}
+          >
             <table className="debtor-table">
               <thead>
                 <tr>
@@ -269,7 +360,14 @@ export function DebtorsPage({ currentEmployee }) {
                   const contract = debtor.contracts?.[0];
                   const room = contract?.room;
                   return (
-                    <tr key={debtor.student.id} className={debtor.isDeadlineReached ? "debtor-deadline-reached" : ""}>
+                    <tr
+                      key={debtor.student.id}
+                      className={
+                        debtor.isDeadlineReached
+                          ? "debtor-deadline-reached"
+                          : ""
+                      }
+                    >
                       <td data-label="Talaba">
                         <button
                           className="debtor-student"
@@ -312,7 +410,9 @@ export function DebtorsPage({ currentEmployee }) {
                             </strong>
                             <small>
                               {room.floor}-qavat
-                              {contract.bedNumber ? ` · ${contract.bedNumber}-o‘rin` : ""}
+                              {contract.bedNumber
+                                ? ` · ${contract.bedNumber}-o‘rin`
+                                : ""}
                             </small>
                           </>
                         ) : (
@@ -321,18 +421,35 @@ export function DebtorsPage({ currentEmployee }) {
                       </td>
                       <td data-label="Davrlar">
                         <span className="debt-period-count">
-                          {debtor.depositDebt ? "Depozit" : `${debtor.periodCount} ta davr`}
+                          {debtor.depositDebt
+                            ? "Depozit"
+                            : `${debtor.periodCount} ta davr`}
                         </span>
                         <small>
                           {debtor.periods
                             .map((paymentPeriod) => paymentPeriod.periodKey)
                             .join(", ")}
                         </small>
-                        {debtor.depositDebt > 0 && <small>Depozit qarzi: {money(debtor.depositDebt)}</small>}
-                        {debtor.paymentDeadline && <small className="debtor-deadline-date">Deadline: {dayjs(debtor.paymentDeadline).format("DD.MM.YYYY")}</small>}
+                        {debtor.depositDebt > 0 && (
+                          <small>
+                            Depozit qarzi: {money(debtor.depositDebt)}
+                          </small>
+                        )}
+                        {debtor.paymentDeadline && (
+                          <small className="debtor-deadline-date">
+                            Deadline:{" "}
+                            {dayjs(debtor.paymentDeadline).format("DD.MM.YYYY")}
+                          </small>
+                        )}
                       </td>
                       <td data-label="Summa">
-                        <b className="debt-money">{tableMoney(data?.isFuturePeriod ? debtor.waitingAmount : debtor.totalDebt)}</b>
+                        <b className="debt-money">
+                          {tableMoney(
+                            data?.isFuturePeriod
+                              ? debtor.waitingAmount
+                              : debtor.totalDebt,
+                          )}
+                        </b>
                       </td>
                       <td data-label="O‘tgan">
                         <b
@@ -345,9 +462,15 @@ export function DebtorsPage({ currentEmployee }) {
                         <div className="debtor-row-actions">
                           <button
                             className="debtor-pay-btn"
-                            onClick={() => debtor.periods.length || debtor.depositDebt ? openPayment(debtor) : navigate(`/student/${debtor.student.id}`)}
+                            onClick={() =>
+                              debtor.periods.length || debtor.depositDebt
+                                ? openPayment(debtor)
+                                : navigate(`/student/${debtor.student.id}`)
+                            }
                           >
-                            {debtor.periods.length || debtor.depositDebt ? "To‘lov qilish" : "Profilga o‘tish"}
+                            {debtor.periods.length || debtor.depositDebt
+                              ? "To‘lov qilish"
+                              : "Profilga o‘tish"}
                           </button>
                           <button
                             className="debtor-history-btn"
@@ -366,10 +489,90 @@ export function DebtorsPage({ currentEmployee }) {
                           >
                             Batafsil
                           </button>
-                          {isOwner && debtor.periods.length > 0 && <button className="debtor-deadline-btn" onClick={() => openDeadline(debtor)}>Deadline</button>}
-                          {isOwner && <button className="debtor-history-btn" disabled={sendingSms || debtor.smsSentCount >= 3} onClick={() => sendSms(debtor)} title={debtor.smsSentCount >= 3 ? 'SMS limiti tugagan' : 'Qarzdorlik SMSini yuborish'}>{smsDebtorId === debtor.student.id && <span className="debtor-btn-spinner" aria-hidden="true" />} {smsDebtorId === debtor.student.id ? 'Yuborilmoqda' : `SMS (${debtor.smsSentCount || 0}/3)`}</button>}
-                          <button className="debtor-more-btn" aria-label="Amallar" onClick={() => setActionDebtor(actionDebtor?.student?.id === debtor.student.id ? null : debtor)}>⋯</button>
-                          {actionDebtor?.student?.id === debtor.student.id && <div className="debtor-inline-actions">{(debtor.periods.length > 0 || debtor.depositDebt > 0) && <button onClick={() => { openPayment(debtor); setActionDebtor(null) }}>To‘lov</button>}<button onClick={() => { setHistoryDebtor(debtor); setActionDebtor(null) }}>Tarix</button><button onClick={() => { setSelected(debtor); setActionDebtor(null) }}>Batafsil</button>{isOwner && debtor.periods.length > 0 && <button onClick={() => { openDeadline(debtor); setActionDebtor(null) }}>Deadline</button>}</div>}
+                          {isOwner && debtor.periods.length > 0 && (
+                            <button
+                              className="debtor-deadline-btn"
+                              onClick={() => openDeadline(debtor)}
+                            >
+                              Deadline
+                            </button>
+                          )}
+                          {isOwner && (
+                            <button
+                              className="debtor-history-btn"
+                              disabled={sendingSms || debtor.smsSentCount >= 3}
+                              onClick={() => sendSms(debtor)}
+                              title={
+                                debtor.smsSentCount >= 3
+                                  ? "SMS limiti tugagan"
+                                  : "Qarzdorlik SMSini yuborish"
+                              }
+                            >
+                              {smsDebtorId === debtor.student.id && (
+                                <span
+                                  className="debtor-btn-spinner"
+                                  aria-hidden="true"
+                                />
+                              )}{" "}
+                              {smsDebtorId === debtor.student.id
+                                ? "Yuborilmoqda"
+                                : `SMS (${debtor.smsSentCount || 0}/3)`}
+                            </button>
+                          )}
+                          <button
+                            className="debtor-more-btn"
+                            aria-label="Amallar"
+                            onClick={() =>
+                              setActionDebtor(
+                                actionDebtor?.student?.id === debtor.student.id
+                                  ? null
+                                  : debtor,
+                              )
+                            }
+                          >
+                            ⋯
+                          </button>
+                          {actionDebtor?.student?.id === debtor.student.id && (
+                            <div className="debtor-inline-actions">
+                              {(debtor.periods.length > 0 ||
+                                debtor.depositDebt > 0) && (
+                                <button
+                                  onClick={() => {
+                                    openPayment(debtor);
+                                    setActionDebtor(null);
+                                  }}
+                                >
+                                  To‘lov
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setHistoryDebtor(debtor);
+                                  setActionDebtor(null);
+                                }}
+                              >
+                                Tarix
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelected(debtor);
+                                  setActionDebtor(null);
+                                }}
+                              >
+                                Batafsil
+                              </button>
+                              {isOwner && debtor.periods.length > 0 && (
+                                <button
+                                  onClick={() => {
+                                    openDeadline(debtor);
+                                    setActionDebtor(null);
+                                  }}
+                                >
+                                  Deadline
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -386,6 +589,18 @@ export function DebtorsPage({ currentEmployee }) {
             </table>
           </div>
         )}
+        {(data?.pagination?.total || 0) > 25 && (
+          <div className="debtor-pagination">
+            <span>Jami {data.pagination.total} ta natija</span>
+            <Pagination
+              current={data.pagination.page}
+              pageSize={data.pagination.limit}
+              total={data.pagination.total}
+              showSizeChanger={false}
+              onChange={setPage}
+            />
+          </div>
+        )}
       </section>
 
       <Modal
@@ -393,7 +608,11 @@ export function DebtorsPage({ currentEmployee }) {
         onCancel={() => setSelected(null)}
         footer={null}
         width={760}
-        title={data?.isFuturePeriod ? "Kutilayotgan to‘lov tafsilotlari" : "Qarzdorlik tafsilotlari"}
+        title={
+          data?.isFuturePeriod
+            ? "Kutilayotgan to‘lov tafsilotlari"
+            : "Qarzdorlik tafsilotlari"
+        }
         rootClassName="debtor-modal"
       >
         <>
@@ -411,15 +630,27 @@ export function DebtorsPage({ currentEmployee }) {
                   <a href={`tel:${selected.student.phone}`}>
                     {selected.student.phone}
                   </a>
-                  <a href={`tel:${selected.student.fatherPhone || selected.student.motherPhone || ""}`}>
-                    {selected.student.fatherPhone || selected.student.motherPhone || "Qo‘shimcha aloqa raqami yo‘q"}
+                  <a
+                    href={`tel:${selected.student.fatherPhone || selected.student.motherPhone || ""}`}
+                  >
+                    {selected.student.fatherPhone ||
+                      selected.student.motherPhone ||
+                      "Qo‘shimcha aloqa raqami yo‘q"}
                   </a>
                 </div>
               </div>
               <div className="debtor-detail-summary">
                 <div>
-                  <span>{data?.isFuturePeriod ? "Kutilayotgan summa" : "Jami qarz"}</span>
-                  <strong>{money(data?.isFuturePeriod ? selected.waitingAmount : selected.totalDebt)}</strong>
+                  <span>
+                    {data?.isFuturePeriod ? "Kutilayotgan summa" : "Jami qarz"}
+                  </span>
+                  <strong>
+                    {money(
+                      data?.isFuturePeriod
+                        ? selected.waitingAmount
+                        : selected.totalDebt,
+                    )}
+                  </strong>
                 </div>
                 <div>
                   <span>Muddati o‘tgan</span>
@@ -430,8 +661,17 @@ export function DebtorsPage({ currentEmployee }) {
                   <strong>{money(selected.currentDebt)}</strong>
                 </div>
               </div>
-              <h4>{data?.isFuturePeriod ? "Kelgusi to‘lov davrlari" : "Qarzdorlik davrlari"}</h4>
-              {selected.depositDebt > 0 && <div className="debtor-deposit-detail"><strong>Depozit qarzi</strong><b>{money(selected.depositDebt)}</b></div>}
+              <h4>
+                {data?.isFuturePeriod
+                  ? "Kelgusi to‘lov davrlari"
+                  : "Qarzdorlik davrlari"}
+              </h4>
+              {selected.depositDebt > 0 && (
+                <div className="debtor-deposit-detail">
+                  <strong>Depozit qarzi</strong>
+                  <b>{money(selected.depositDebt)}</b>
+                </div>
+              )}
               <div className="debtor-periods">
                 {selected.periods.map((period) => (
                   <article key={period.id}>
@@ -469,10 +709,38 @@ export function DebtorsPage({ currentEmployee }) {
           )}
         </>
       </Modal>
-      <Modal open={Boolean(deadlineDebtor)} onCancel={() => setDeadlineDebtor(null)} footer={null} title={deadlineDebtor ? `${deadlineDebtor.student.fullName} — to‘lov deadline’i` : "To‘lov deadline’i"} destroyOnHidden>
-        <Form form={deadlineForm} layout="vertical" onFinish={saveDeadline} requiredMark={false}>
-          <Form.Item name="deadline" label="To‘lov qilishi kerak bo‘lgan sana" rules={[{ required: true, message: "Sanani tanlang" }]}><DatePicker format="DD.MM.YYYY" style={{ width: "100%" }} /></Form.Item>
-          <div className="debtor-payment-actions"><Button onClick={() => setDeadlineDebtor(null)}>Bekor qilish</Button><Button type="primary" htmlType="submit" loading={savingDeadline}>Saqlash</Button></div>
+      <Modal
+        open={Boolean(deadlineDebtor)}
+        onCancel={() => setDeadlineDebtor(null)}
+        footer={null}
+        title={
+          deadlineDebtor
+            ? `${deadlineDebtor.student.fullName} — to‘lov deadline’i`
+            : "To‘lov deadline’i"
+        }
+        destroyOnHidden
+      >
+        <Form
+          form={deadlineForm}
+          layout="vertical"
+          onFinish={saveDeadline}
+          requiredMark={false}
+        >
+          <Form.Item
+            name="deadline"
+            label="To‘lov qilishi kerak bo‘lgan sana"
+            rules={[{ required: true, message: "Sanani tanlang" }]}
+          >
+            <DatePicker format="DD.MM.YYYY" style={{ width: "100%" }} />
+          </Form.Item>
+          <div className="debtor-payment-actions">
+            <Button onClick={() => setDeadlineDebtor(null)}>
+              Bekor qilish
+            </Button>
+            <Button type="primary" htmlType="submit" loading={savingDeadline}>
+              Saqlash
+            </Button>
+          </div>
         </Form>
       </Modal>
       <Modal
@@ -494,54 +762,171 @@ export function DebtorsPage({ currentEmployee }) {
           requiredMark={false}
           onFinish={acceptPayment}
         >
-          <Form.Item
-            name="paymentKind"
-            label="To‘lov yo‘nalishi"
-          >
-            <Segmented className="payment-kind-segmented" block options={[{ value: "contract", label: "Shartnoma to‘lovi", disabled: !(paymentDebtor?.periods || []).length }, { value: "deposit", label: "Depozit to‘lovi", disabled: !Number(paymentDebtor?.depositDebt || 0) }]} onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {}, receiptFiles: {} })} />
-          </Form.Item>
-          {paymentKind === "contract" && <>
-          <Form.Item
-            name="installment"
-            label="Qaysi oy uchun"
-            rules={[{ required: true, message: "Davrni tanlang" }]}
-          >
-            <Select
-              onChange={() => paymentForm.setFieldsValue({ paymentParts: { cash: 0, online: 0, card: 0, bank: 0 }, paymentDates: {}, receiptFiles: {} })}
-              options={(paymentDebtor?.periods || []).map((paymentPeriod) => ({
-                value: paymentPeriod.id,
-                label: `${paymentPeriod.periodKey} — ${money(paymentPeriod.debt)} qoldiq`,
-              }))}
+          <Form.Item name="paymentKind" label="To‘lov yo‘nalishi">
+            <Segmented
+              className="payment-kind-segmented"
+              block
+              options={[
+                {
+                  value: "contract",
+                  label: "Shartnoma to‘lovi",
+                  disabled: !(paymentDebtor?.periods || []).length,
+                },
+                {
+                  value: "deposit",
+                  label: "Depozit to‘lovi",
+                  disabled: !Number(paymentDebtor?.depositDebt || 0),
+                },
+              ]}
+              onChange={() =>
+                paymentForm.setFieldsValue({
+                  paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
+                  paymentDates: {},
+                  receiptFiles: {},
+                })
+              }
             />
           </Form.Item>
-          </>}
+          {paymentKind === "contract" && (
+            <>
+              <Form.Item
+                name="installment"
+                label="Qaysi oy uchun"
+                rules={[{ required: true, message: "Davrni tanlang" }]}
+              >
+                <Select
+                  onChange={() =>
+                    paymentForm.setFieldsValue({
+                      paymentParts: { cash: 0, online: 0, card: 0, bank: 0 },
+                      paymentDates: {},
+                      receiptFiles: {},
+                    })
+                  }
+                  options={(paymentDebtor?.periods || []).map(
+                    (paymentPeriod) => ({
+                      value: paymentPeriod.id,
+                      label: `${paymentPeriod.periodKey} — ${money(paymentPeriod.debt)} qoldiq`,
+                    }),
+                  )}
+                />
+              </Form.Item>
+            </>
+          )}
           {paymentKind === "contract" && selectedPeriod && (
             <div className="debtor-payment-balance">
               <span>Tanlangan davr qarzdorligi</span>
               <strong>{money(selectedPeriod.debt)}</strong>
             </div>
           )}
-          {paymentKind === "deposit" && <div className="debtor-payment-balance"><span>Depozit qarzdorligi</span><strong>{money(paymentDebtor?.depositDebt)}</strong></div>}
+          {paymentKind === "deposit" && (
+            <div className="debtor-payment-balance">
+              <span>Depozit qarzdorligi</span>
+              <strong>{money(paymentDebtor?.depositDebt)}</strong>
+            </div>
+          )}
           <div className="debtor-payment-split">
             <label>To‘lov usullari bo‘yicha summa va sana</label>
             <div className="debtor-payment-methods">
               {Object.entries(methods).map(([method, label]) => (
-                <div className={`debtor-payment-method-row method-${method}`} key={method}>
-                  <Form.Item name={["paymentParts", method]} label={label}><InputNumber min={0} precision={0} placeholder="Summa" formatter={(value) => String(value || "").replace(/\B(?=(\d{3})+(?!\d))/g, " ")} parser={(value) => String(value || "").replace(/[^\d]/g, "")} /></Form.Item>
-                  <Form.Item name={["paymentDates", method]} label="To‘lov sanasi va vaqti" rules={Number(paymentParts[method] || 0) > 0 ? [{ required: true, message: `${label} sanasini tanlang` }] : []}><DatePicker disabled={Number(paymentParts[method] || 0) <= 0} showTime format="DD.MM.YYYY HH:mm" style={{ width: "100%" }} /></Form.Item>
-                  {method !== 'cash' && Number(paymentParts[method] || 0) > 0 && <Form.Item name={['receiptFiles', method]} label={`${label} kvitansiyasi (ixtiyoriy)`} preserve={false}><PaymentReceiptField /></Form.Item>}
+                <div
+                  className={`debtor-payment-method-row method-${method}`}
+                  key={method}
+                >
+                  <Form.Item name={["paymentParts", method]} label={label}>
+                    <InputNumber
+                      min={0}
+                      precision={0}
+                      placeholder="Summa"
+                      formatter={(value) =>
+                        String(value || "").replace(
+                          /\B(?=(\d{3})+(?!\d))/g,
+                          " ",
+                        )
+                      }
+                      parser={(value) =>
+                        String(value || "").replace(/[^\d]/g, "")
+                      }
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name={["paymentDates", method]}
+                    label="To‘lov sanasi va vaqti"
+                    rules={
+                      Number(paymentParts[method] || 0) > 0
+                        ? [
+                            {
+                              required: true,
+                              message: `${label} sanasini tanlang`,
+                            },
+                          ]
+                        : []
+                    }
+                  >
+                    <DatePicker
+                      disabled={Number(paymentParts[method] || 0) <= 0}
+                      showTime
+                      format="DD.MM.YYYY HH:mm"
+                      style={{ width: "100%" }}
+                    />
+                  </Form.Item>
+                  {method !== "cash" &&
+                    Number(paymentParts[method] || 0) > 0 && (
+                      <Form.Item
+                        name={["receiptFiles", method]}
+                        label={`${label} kvitansiyasi (ixtiyoriy)`}
+                        preserve={false}
+                      >
+                        <PaymentReceiptField />
+                      </Form.Item>
+                    )}
                 </div>
               ))}
             </div>
-            <div className={`debtor-payment-total ${partsTotal > Number(paymentKind === "deposit" ? paymentDebtor?.depositDebt : selectedPeriod?.debt || 0) ? "invalid" : ""}`}><div><small>Jami to‘lov</small><strong>{money(partsTotal)}</strong></div><div><small>Maksimal</small><strong>{money(paymentKind === "deposit" ? paymentDebtor?.depositDebt : selectedPeriod?.debt)}</strong></div></div>
+            <div
+              className={`debtor-payment-total ${partsTotal > Number(paymentKind === "deposit" ? paymentDebtor?.depositDebt : selectedPeriod?.debt || 0) ? "invalid" : ""}`}
+            >
+              <div>
+                <small>Jami to‘lov</small>
+                <strong>{money(partsTotal)}</strong>
+              </div>
+              <div>
+                <small>Maksimal</small>
+                <strong>
+                  {money(
+                    paymentKind === "deposit"
+                      ? paymentDebtor?.depositDebt
+                      : selectedPeriod?.debt,
+                  )}
+                </strong>
+              </div>
+            </div>
           </div>
-          <Form.Item name="payerType" label="To‘lovni kim qildi?" rules={[{ required: true, whitespace: true, message: "To‘lovchini kiriting" }]}><Input maxLength={150} placeholder="Masalan: otasi yoki talabaning o‘zi" /></Form.Item>
+          <Form.Item
+            name="payerType"
+            label="To‘lovni kim qildi?"
+            rules={[
+              {
+                required: true,
+                whitespace: true,
+                message: "To‘lovchini kiriting",
+              },
+            ]}
+          >
+            <Input
+              maxLength={150}
+              placeholder="Masalan: otasi yoki talabaning o‘zi"
+            />
+          </Form.Item>
           <Form.Item name="note" label="Izoh">
             <Input placeholder="Ixtiyoriy" />
           </Form.Item>
           <div className="debtor-payment-actions">
             <Button onClick={() => setPaymentDebtor(null)}>Bekor qilish</Button>
-            <Button type="primary" htmlType="submit" loading={creatingPayment || creatingDeposit}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={creatingPayment || creatingDeposit}
+            >
               To‘lovni tasdiqlash
             </Button>
           </div>
@@ -595,8 +980,20 @@ export function DebtorsPage({ currentEmployee }) {
                   </td>
                 </tr>
               )}
-              {historyLoading && <tr><td colSpan="6" className="debtor-state">Yuklanmoqda…</td></tr>}
-              {historyError && <tr><td colSpan="6" className="debtor-state">To‘lovlar tarixini yuklab bo‘lmadi</td></tr>}
+              {historyLoading && (
+                <tr>
+                  <td colSpan="6" className="debtor-state">
+                    Yuklanmoqda…
+                  </td>
+                </tr>
+              )}
+              {historyError && (
+                <tr>
+                  <td colSpan="6" className="debtor-state">
+                    To‘lovlar tarixini yuklab bo‘lmadi
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

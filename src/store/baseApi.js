@@ -351,6 +351,10 @@ export const baseApi = createApi({
         unsubscribe()
       },
     }),
+    getAllPayments: builder.query({
+      query: (params = {}) => ({ url: '/payments', params: { ...params, all: true } }),
+      transformResponse: (response) => response.data,
+    }),
     getPaymentOptions: builder.query({
       query: () => '/payments/options',
       transformResponse: (response) => response.data,
@@ -383,7 +387,10 @@ export const baseApi = createApi({
       },
     }),
     getDebtors: builder.query({
-      query: (period) => ({ url: '/debtors', params: period ? { period } : undefined }),
+      query: (argument = {}) => {
+        const options = typeof argument === 'string' ? { period: argument } : argument
+        return { url: '/debtors', params: options }
+      },
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'Debtor', id: 'LIST' }],
       async onCacheEntryAdded(_argument, { cacheEntryRemoved, dispatch }) {
@@ -392,6 +399,10 @@ export const baseApi = createApi({
         await cacheEntryRemoved
         unsubscribe()
       },
+    }),
+    getAllDebtors: builder.query({
+      query: (period) => ({ url: '/debtors', params: { period, all: true } }),
+      transformResponse: (response) => response.data,
     }),
     getDebtorHistory: builder.query({
       query: (studentId) => `/debtors/${studentId}/history`,
@@ -797,10 +808,12 @@ export const {
   useUpdateStudentContractMutation,
   useDeleteStudentContractMutation,
   useGetPaymentsQuery,
+  useLazyGetAllPaymentsQuery,
   useGetPaymentOptionsQuery,
   useGetAdvancePaymentsQuery,
   useGetStudentPaymentsQuery,
   useGetDebtorsQuery,
+  useLazyGetAllDebtorsQuery,
   useGetDebtorHistoryQuery,
   useSetDebtorDeadlineMutation,
   useSendDebtorSmsMutation,
@@ -845,6 +858,7 @@ export const {
   useGetNotificationsQuery,
   useMarkNotificationReadMutation,
   useGetCashSessionsQuery,
+  useLazyGetCashSessionsQuery,
   useCloseCashSessionMutation,
   useApproveCashSessionMutation,
   useCancelCashSessionMutation,
